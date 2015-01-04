@@ -1,0 +1,52 @@
+build/
+
+# rust ignore
+
+*.o
+*.so
+*.rlib
+*.dll
+*.exe
+**/Cargo.lock
+**/target/
+
+# linux ignore
+
+*~
+.directory
+
+# osx ignore
+
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# windows ignore
+
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# vim ignore
+
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+*.un~
+Session.vim
+.netrwhist
+*~
