@@ -44,6 +44,10 @@ impl<'a> SentenceWordToken<'a> {
       tok.inner.push(c.to_lowercase())
     }
 
+    if is_str_numeric(slice) {
+      tok.set_is_numeric(true);
+    } 
+
     if !tok.has_final_period() {
       tok.inner.push('.');
     }
