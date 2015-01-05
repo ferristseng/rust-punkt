@@ -28,9 +28,11 @@ extern crate collections;
 #[cfg(test)] extern crate test;
 #[phase(plugin, link)] extern crate log;
 
+pub mod token;
 pub mod tokenizer;
-pub mod trainer;
+//pub mod trainer;
 
+/*
 mod prelude {
   use trainer::Data;
   use tokenizer::Token;
@@ -60,6 +62,7 @@ mod prelude {
     }
   }
 }
+*/
 
 mod ortho {
   use phf::Map;
@@ -110,7 +113,8 @@ mod ortho {
     b'a' => UNKNOWN_LC  // 97
   };
 }
-
+ 
+/*
 mod iter {
   /// Iterates over every PuntkToken from the supplied iterator and returns 
   /// the immediate following token. Returns None for the following token on the 
@@ -202,3 +206,4 @@ mod iter {
     ConsecutiveTokenMutIterator { iter: iter, last: None }
   }
 }
+*/

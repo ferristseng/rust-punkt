@@ -7,72 +7,8 @@ use std::fmt::{Show, Formatter, Result};
 use phf::Set;
 use xxhash::XXState;
 
-#[cfg(debug)]
-enum PunktCategory {
-  Abbreviation,
-  SentenceBreak,
-  Ellipsis
-}
-
-#[cfg(debug)]
-impl Show for PunktCategory {
-  fn fmt(&self, f: &mut Formatter) -> Result {
-    write!(
-      f,
-      "{}",
-      match *self {
-        PunktCategory::Abbreviation  => "<A>",
-        PunktCategory::SentenceBreak => "<S>",
-        PunktCategory::Ellipsis      => "<E>"
-      })
-  }
-}
-
 /// Characters that denote a sentence boundary.
 pub static SENTENCE_TERMINATORS: Set<char> = phf_set! { '!', '.', '?' };
-
-/// A slice from a document that has a start position (its index),
-/// and an associated length. From these properties, the original 
-/// document slice can be recreated (given the original document)
-/// still is in scope.
-pub trait DocumentIndexedSlice {
-  fn len(&self) -> uint;
-  fn start(&self) -> uint;
-}
-
-/// An object that is a slice from a document. The slice can be 
-/// retrieved from the original document.
-pub trait DocumentSlice {
-  fn as_doc_slice<'a>(&self, doc: &'a str) -> &'a str;
-}
-
-/// All indexed document slices are document slices. The document slice
-/// can be recreated by slicing from start to start + len.
-impl<T: DocumentIndexedSlice> DocumentSlice for T {
-  #[inline]
-  fn as_doc_slice<'a>(&self, doc: &'a str) -> &'a str {
-    doc.slice(self.start(), self.start() + self.len())
-  }
-}
-/// Possible cases a letter can be in. OR (|) can be applied to these with 
-/// a OrthographyPosition to get a corrosponding OrthographicContext from 
-/// OrthoMap.
-#[derive(Show, Eq, PartialEq, Copy)]
-pub enum LetterCase {
-  Upper,
-  Lower,
-  Unknown,
-}
-
-impl LetterCase {
-  pub fn as_byte(&self) -> u8 {
-    match *self {
-      LetterCase::Upper   => 0b00000010,
-      LetterCase::Lower   => 0b00000001,
-      LetterCase::Unknown => 0b00000011
-    }
-  }
-}
 
 /// A tokenizer used by a PunktTokenizer.
 /// The flags represent certain traits about where the word token and its location
@@ -85,22 +21,6 @@ pub struct PunktToken {
   inner: String,
   flags: u16
 }
-
-// Flags that can be set. These describe certain properties about the Token.
-const HAS_FINAL_PERIOD  : u16 = 0b0000000000000001;
-const IS_ELLIPSIS       : u16 = 0b0000000000000010;
-const IS_INITIAL        : u16 = 0b0000000000000100;
-const IS_ABBREV         : u16 = 0b0000000000001000;
-const IS_PARAGRAPH_START: u16 = 0b0000000000010000;
-const IS_NEWLINE_START  : u16 = 0b0000000000100000;
-const IS_SENTENCE_BREAK : u16 = 0b0000000001000000;
-const IS_NUMERIC        : u16 = 0b0000000010000000;
-const IS_NON_PUNCT      : u16 = 0b0000000100000000;
-const IS_UPPERCASE      : u16 = 0b0000001000000000;
-const IS_LOWERCASE      : u16 = 0b0000010000000000;
-const HAS_DIGIT         : u16 = 0b0000100000000000;
-const HAS_PUNCT         : u16 = 0b0001000000000000;
-const OVERRIDE_BREAK    : u16 = 0b1000000000000000;
 
 /// This string is defined by NLTK. It's necessary as all numeric data 
 /// from NLTK data uses this string as a representation. 
@@ -439,13 +359,6 @@ impl PunktToken {
     } else {
       LetterCase::Unknown
     }
-  }
-
-  /// Returns the number of characters in the ORIGINAL token. This is a O(n) operation. 
-  /// Only use if TOTALLY necessary.
-  #[inline]
-  pub fn char_len(&self) -> uint {
-    self.token().chars().count()
   }
 
   /// Gets the tag associated with the token. This is used for 

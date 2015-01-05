@@ -7,7 +7,7 @@ use ortho::{ORTHO_LC, MIDDLE_UC, BEGIN_LC, ORTHO_UC};
 use prelude::PunktFirstPassAnnotater;
 
 use trainer::Data;
-use tokenizer::prelude::{Tokenizer, DocumentIndexedSlice, DocumentSlice};
+use tokenizer::prelude::{DocumentIndexedSlice, DocumentSlice};
 
 static PUNCTUATION: Set<u8> = phf_set! { b'.', b';', b':', b',', b'!', b'?' };
 
@@ -18,7 +18,7 @@ pub struct PunktSentenceTokenizer<'a> {
 impl<'a> PunktSentenceTokenizer<'a> {
   #[inline]
   pub fn new(data: &'a Data) -> PunktSentenceTokenizer<'a> {
-    PunktSentenceTokenizer { data: data, word_tokenizer: Default::default() }
+    PunktSentenceTokenizer { data: data }
   }
 }
 
