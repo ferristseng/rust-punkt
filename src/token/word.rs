@@ -19,13 +19,7 @@ pub struct SentenceWordToken {
 impl_flags!(SentenceWordToken, u8);
 
 impl SentenceWordToken {
-  pub fn new(
-    start: uint,
-    slice: &str,
-    is_ellipsis: bool,
-    is_paragraph_start: bool,
-    is_newline_start: bool
-  ) -> SentenceWordToken {
+  pub fn new(start: uint, slice: &str) -> SentenceWordToken {
     debug_assert!(slice.len() > 0);
 
     // Add a period to any tokens without a period. This is an optimization 
@@ -51,10 +45,6 @@ impl SentenceWordToken {
     for c in slice.chars() { 
       tok.inner.push(c.to_lowercase())
     }
-    
-    tok.set_is_ellipsis(is_ellipsis);
-    tok.set_is_paragraph_start(is_paragraph_start);
-    tok.set_is_newline_start(is_newline_start);
 
     tok
   }

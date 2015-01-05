@@ -6,10 +6,7 @@ authors = ["Ferris Tseng <ferristseng@fastmail.fm>"]
 [dependencies]
 log = "0.1.7"
 phf = "0.4.5"
-phf_mac = "0.4.4"
+phf_mac = "0.4.5"
 xxhash = "0.0.4"
 rust-freqdist = "0.0.1"
 rustc-serialize = "0.2.2"
-
-[profile.bench]
-opt_level = 3

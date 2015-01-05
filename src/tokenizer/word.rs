@@ -31,6 +31,29 @@ pub struct WordTokenizer<'a> {
   params: &'a WordTokenizerParameters
 }
 
+impl<'a> WordTokenizer<'a> {
+  #[inline]
+  pub fn new(doc: &'a str) -> WordTokenizer<'a> {
+    WordTokenizer {
+      doc: doc, 
+      pos: 0,
+      params: Default::default()
+    }
+  }
+
+  #[inline]
+  pub fn with_parameters(
+    doc: &'a str, 
+    params: &'a WordTokenizerParameters
+  ) -> WordTokenizer<'a> {
+    WordTokenizer {
+      doc: doc,
+      pos: 0,
+      params: params
+    }
+  }
+}
+
 static STATE_SENT_END: u8 = 0b001;
 static STATE_TOKN_BEG: u8 = 0b010;
 static STATE_CAPT_TOK: u8 = 0b100;
@@ -41,24 +64,26 @@ impl<'a> Iterator for WordTokenizer<'a> {
   fn next(&mut self) -> Option<SentenceWordToken> {
     let mut tstart = self.pos;
     let mut nstart = self.pos;
+    let mut retpos = None;
     let mut state: u8 = 0;
-
-    macro_rules! return_token(
-      () => (
-        return Some(SentenceWordToken::new(
-          tstart,
-          self.doc.slice_or_fail(&tstart, &self.pos),
-          false,
-          false,
-          false));
-      )
-    );
 
     while self.pos < self.doc.len() {
       let cur = self.doc.char_at(self.pos);
-
-      self.pos += cur.len_utf8();
       
+      macro_rules! return_token(
+        () => (
+          {
+            // Return to the last encountered sentence ending character, 
+            // if any are encountered during capturing of a token.
+            self.pos = retpos.unwrap_or(self.pos);
+
+            return Some(SentenceWordToken::new(
+              tstart,
+              self.doc.slice_or_fail(&tstart, &(self.pos + cur.len_utf8()))));
+          }
+        )
+      );
+
       match cur {
         // A sentence ending has not been encountered yet, and one 
         // was encountered. Start searching for a token.
@@ -93,15 +118,24 @@ impl<'a> Iterator for WordTokenizer<'a> {
             state |= STATE_CAPT_TOK;         
           }
         }
+        // Capturing a token, and a sentence ending token is encountered. 
+        // This token needs to be revisited, so set retpos to this position.
+        c if state & STATE_CAPT_TOK != 0 &&
+             self.params.sent_end.contains(&c) =>
+        {
+          retpos = Some(self.pos);
+        }
         // Whitespace after a token has been encountered. Final state -- return.
-        c if state & STATE_CAPT_TOK != 0 
-             && c.is_whitespace() =>
+        c if state & STATE_CAPT_TOK != 0 && 
+             c.is_whitespace() =>
         {
           return_token!()
         }
         // Skip if not in a state at all.
         _ => ()
       }
+
+      self.pos += cur.len_utf8();
     }
 
     None
