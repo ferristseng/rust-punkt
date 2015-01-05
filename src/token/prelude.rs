@@ -41,30 +41,6 @@ impl LetterCase {
   }
 }
 
-/// A slice from a document that has a start position (its index),
-/// and an associated length. From these properties, the original 
-/// document slice can be recreated (given the original document)
-/// still is in scope.
-pub trait DocumentIndexedSlice {
-  fn len(&self) -> uint;
-  fn start(&self) -> uint;
-}
-
-/// An object that is a slice from a document. The slice can be 
-/// retrieved from the original document.
-pub trait DocumentSlice {
-  fn as_doc_slice<'a>(&self, doc: &'a str) -> &'a str;
-}
-
-/// All indexed document slices are document slices. The document slice
-/// can be recreated by slicing from start to start + len.
-impl<T: DocumentIndexedSlice> DocumentSlice for T {
-  #[inline]
-  fn as_doc_slice<'a>(&self, doc: &'a str) -> &'a str {
-    doc.slice(self.start(), self.start() + self.len())
-  }
-}
-
 pub trait WordTokenWithPeriod {
   fn token_with_period(&self) -> &str;
 }
@@ -361,6 +337,7 @@ pub trait WordTokenWithFlagsOpsExt<T>: WordTokenWithFlags<Flags = T> {
   fn is_uppercase(&self) -> bool;
   fn is_lowercase(&self) -> bool;
   fn is_numeric(&self) -> bool;
+  fn is_initial(&self) -> bool;
   fn is_non_punct(&self) -> bool;
   fn is_alphabetic(&self) -> bool;
 
@@ -377,6 +354,7 @@ pub trait WordTokenWithFlagsOpsExt<T>: WordTokenWithFlags<Flags = T> {
   fn set_is_uppercase(&mut self, b: bool);
   fn set_is_lowercase(&mut self, b: bool);
   fn set_is_numeric(&mut self, b: bool);
+  fn set_is_initial(&mut self, b: bool);
   fn set_is_non_punct(&mut self, b: bool);
   fn set_is_alphabetic(&mut self, b: bool);
 }
@@ -396,6 +374,11 @@ impl<T: WordTokenWithFlags<Flags = u16>> WordTokenWithFlagsOpsExt<u16> for T {
   #[inline]
   fn is_numeric(&self) -> bool {
     *self.flags() & IS_NUMERIC != 0
+  }
+
+  #[inline]
+  fn is_initial(&self) -> bool {
+    *self.flags() & IS_INITIAL != 0
   }
 
   #[inline]
@@ -432,6 +415,15 @@ impl<T: WordTokenWithFlags<Flags = u16>> WordTokenWithFlagsOpsExt<u16> for T {
       *self.flags_mut() |= IS_NUMERIC;
     } else if self.is_numeric() {
       *self.flags_mut() ^= IS_NUMERIC;
+    }
+  }
+
+  #[inline]
+  fn set_is_initial(&mut self, b: bool) {
+    if b {
+      *self.flags_mut() |= IS_INITIAL;
+    } else if self.is_initial() {
+      *self.flags_mut() ^= IS_INITIAL;
     }
   }
 
@@ -479,13 +471,14 @@ fn test_training_token_flags() {
   perform_flag_test!(tok, set_is_uppercase, is_uppercase);
   perform_flag_test!(tok, set_is_lowercase, is_lowercase);
   perform_flag_test!(tok, set_is_numeric, is_numeric);
+  perform_flag_test!(tok, set_is_initial, is_initial);
   perform_flag_test!(tok, set_is_non_punct, is_non_punct);
   perform_flag_test!(tok, set_is_alphabetic, is_alphabetic);
 }
 
 #[test]
 fn test_sentence_word_token_flags() {
-  let mut tok = SentenceWordToken::new(0, "test", false, false, false);
+  let mut tok = SentenceWordToken::new("test");
   
   assert_eq!(*tok.flags(), 0);
 

@@ -9,7 +9,8 @@ use token::prelude::{
   WordTokenWithPeriod, 
   WordTypeToken,
   WordTokenWithFlags, 
-  WordTokenWithFlagsOps};
+  WordTokenWithFlagsOps,
+  WordTokenWithFlagsOpsExt};
 
 /// A Training Token is used during training, and includes an extended number of 
 /// flags, to allow caching of a greater number of derived properties about the token.
@@ -46,11 +47,23 @@ impl TrainingToken {
       }
     };
 
+    // These are mutually exclusive. Only need to set one, although 
+    // still potentially need to run both checks.
+    if is_str_numeric(slice) {
+      tok.set_is_numeric(true);
+    } else if is_str_initial(slice) {
+      tok.set_is_initial(true);
+    }
+
     // Builds a normalized version of the slice from the slice.
     for c in slice.chars() { 
       tok.inner.push(c.to_lowercase())
     }
     
+    if !tok.has_final_period() {
+      tok.inner.push('.');
+    }
+
     tok.set_is_ellipsis(is_ellipsis);
     tok.set_is_paragraph_start(is_paragraph_start);
     tok.set_is_newline_start(is_newline_start);
@@ -92,5 +105,54 @@ impl BorrowFrom<Rc<TrainingToken>> for str {
   #[inline]
   fn borrow_from(owned: &Rc<TrainingToken>) -> &str {
     owned.typ()
+  }
+}
+
+/// A number can start with a negative sign ('-'), and be followed by digits
+/// or isolated periods, commas, or dashes. 
+/// Note: It's assumed that multi-chars are taken out the input when creating word 
+/// tokens, so a numeric word token SHOULD not have a multi-char within it as
+/// its received. This assumption should be fulfilled by the parser generating 
+/// these word tokens. If it isn't some weird outputs are possible (such as "5.4--5").
+#[inline]
+fn is_str_numeric(tok: &str) -> bool {
+  let mut digit_found = false;
+  let mut pos = 0u;
+
+  for c in tok.chars() {
+    match c {
+      // A digit was found. Note this to confirm punctuation
+      // within the number is valid or not.
+      _ if c.is_digit(10) => {
+        digit_found = true
+      }
+      // A delimeter was found. This is valid as long as 
+      // a digit was also found prior.
+      ',' | '.' | '-' if digit_found => (),
+      // A comma or period was found as the first character, or 
+      // after a negative sign. This is a valid token.
+      ',' | '.' if pos == 0 || pos == 1 => (),
+      // A negative sign is found. 
+      '-' if pos == 0 => (),
+      // A non numeric token was encountered in the string that 
+      // isn't a valid one. Return false.
+      _ => return false
+    }
+
+    pos += c.len_utf8(); 
+  }
+
+  digit_found
+}
+
+/// Tests if the token is an initial. 
+#[inline]
+fn is_str_initial(tok: &str) -> bool {
+  let mut iter = tok.chars();
+
+  match (iter.next(), iter.next())
+  {
+    (Some(c), Some('.')) if c.is_alphabetic() => true,
+    _ => false
   }
 }

@@ -8,3 +8,4 @@ pub use tokenizer::token::PunktToken as Token;
 //mod token;
 //mod sentence;
 mod word;
+mod training;

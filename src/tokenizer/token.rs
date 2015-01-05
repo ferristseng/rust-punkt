@@ -72,7 +72,7 @@ impl PunktToken {
       flags |= IS_NUMERIC;
     } else if PunktToken::is_token_initial(tok) {
       flags |= IS_INITIAL;
-    } 
+    }
 
     if tok.ends_with(".") {
       flags |= HAS_FINAL_PERIOD; 

@@ -1,7 +1,7 @@
 use std::ops::Slice;
 use std::default::Default;
 
-use token::word::SentenceWordToken;
+use token::SentenceWordToken;
 use token::prelude::WordToken;
 
 use phf::Set;
@@ -54,14 +54,14 @@ impl<'a> WordTokenizer<'a> {
   }
 }
 
-static STATE_SENT_END: u8 = 0b001;
-static STATE_TOKN_BEG: u8 = 0b010;
-static STATE_CAPT_TOK: u8 = 0b100;
+const STATE_SENT_END: u8 = 0b001;
+const STATE_TOKN_BEG: u8 = 0b010;
+const STATE_CAPT_TOK: u8 = 0b100;
 
 impl<'a> Iterator for WordTokenizer<'a> {
-  type Item = SentenceWordToken;
+  type Item = (SentenceWordToken<'a>, SentenceWordToken<'a>);
 
-  fn next(&mut self) -> Option<SentenceWordToken> {
+  fn next(&mut self) -> Option<(SentenceWordToken<'a>, SentenceWordToken<'a>)> {
     let mut tstart = self.pos;
     let mut nstart = self.pos;
     let mut retpos = None;
@@ -73,13 +73,15 @@ impl<'a> Iterator for WordTokenizer<'a> {
       macro_rules! return_token(
         () => (
           {
+            let end = self.pos;
+
             // Return to the last encountered sentence ending character, 
             // if any are encountered during capturing of a token.
-            self.pos = retpos.unwrap_or(self.pos);
+            self.pos = retpos.unwrap_or(self.pos + cur.len_utf8());
 
-            return Some(SentenceWordToken::new(
-              tstart,
-              self.doc.slice_or_fail(&tstart, &(self.pos + cur.len_utf8()))));
+            return Some((
+              SentenceWordToken::new(self.doc.slice_or_fail(&tstart, &end)),
+              SentenceWordToken::new(self.doc.slice_or_fail(&nstart, &end))));
           }
         )
       );
@@ -115,6 +117,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
              state & STATE_CAPT_TOK == 0 =>
         {
           if !c.is_whitespace() {
+            nstart = self.pos;
             state |= STATE_CAPT_TOK;         
           }
         }
@@ -149,17 +152,22 @@ impl<'a> Iterator for WordTokenizer<'a> {
 
 #[test]
 fn test_word_tokenizer() {
-  let mut iter = WordTokenizer {
+  let iter = WordTokenizer {
     pos: 0,
-    doc: include_str!("../../test/ny-times-article-01-raw.txt"),
+    doc: include_str!("../../test/raw/ny-times-article-01.txt"),
     params: Default::default()
   };
 
-  let collect: Vec<SentenceWordToken> = iter.collect();
+  let collect: Vec<(SentenceWordToken, SentenceWordToken)> = iter.collect();
 
-  for c in collect.iter() {
-    println!("--[{}]--", c.token().escape_default());
+  println!("");
+
+  for &(ref c0, ref c1) in collect.iter() {
+    println!(
+      "('{}', '{}')", 
+      c0.original().escape_default(), 
+      c1.original().escape_default());
   }
 
-  assert!(false);
+  assert!(true);
 }

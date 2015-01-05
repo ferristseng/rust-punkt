@@ -10,23 +10,21 @@ use token::prelude::{
   WordTokenWithFlags,
   WordTokenWithFlagsOps};
 
-pub struct SentenceWordToken {
-  start: uint,
+pub struct SentenceWordToken<'a> {
+  slice: &'a str,
   inner: String,
   flags: u8
 }
 
-impl_flags!(SentenceWordToken, u8);
-
-impl SentenceWordToken {
-  pub fn new(start: uint, slice: &str) -> SentenceWordToken {
+impl<'a> SentenceWordToken<'a> {
+  pub fn new(slice: &'a str) -> SentenceWordToken {
     debug_assert!(slice.len() > 0);
 
     // Add a period to any tokens without a period. This is an optimization 
     // to avoid creating an entirely new token when searching through the HashSet.
     let mut tok = if slice.as_bytes()[slice.len() - 1] == b'.' {
       let mut tok = SentenceWordToken {
-        start: start,
+        slice: slice,
         inner: String::with_capacity(slice.len()),
         flags: 0x0
       };
@@ -35,7 +33,7 @@ impl SentenceWordToken {
       tok
     } else {
       SentenceWordToken {
-        start: start,
+        slice: slice,
         inner: String::with_capacity(slice.len() + 1),
         flags: 0x0
       }
@@ -46,42 +44,65 @@ impl SentenceWordToken {
       tok.inner.push(c.to_lowercase())
     }
 
+    if !tok.has_final_period() {
+      tok.inner.push('.');
+    }
+
     tok
+  }
+
+  #[inline]
+  pub fn original(&self) -> &str {
+    self.slice
   }
 }
 
-impl WordTokenWithPeriod for SentenceWordToken {
+impl<'a> WordTokenWithFlags for SentenceWordToken<'a> {
+  type Flags = u8;
+
+  #[inline]
+  fn flags(&self) -> &u8 {
+    &self.flags
+  }
+
+  #[inline]
+  fn flags_mut(&mut self) -> &mut u8 {
+    &mut self.flags
+  }
+}
+
+impl<'a> WordTokenWithPeriod for SentenceWordToken<'a> {
   #[inline]
   fn token_with_period(&self) -> &str {
     self.inner.as_slice()
   }
 }
 
-impl Show for SentenceWordToken {
+impl<'a> Show for SentenceWordToken<'a> {
   fn fmt(&self, fmt: &mut Formatter) -> Result {
-    write!(fmt, "{}", self.token()) 
+    write!(fmt, "{}", self.slice) 
   }
 }
 
-impl Eq for SentenceWordToken { }
+impl<'a> Eq for SentenceWordToken<'a> { }
 
-impl PartialEq for SentenceWordToken {
+impl<'a> PartialEq for SentenceWordToken<'a> {
   #[inline]
   fn eq(&self, other: &SentenceWordToken) -> bool {
     self.token() == other.token()
   }
 }
 
-impl Hash<XXState> for SentenceWordToken {
+impl<'a> Hash<XXState> for SentenceWordToken<'a> {
   #[inline]
   fn hash(&self, state: &mut XXState) {
     self.token().hash(state)
   }
 }
 
-impl BorrowFrom<SentenceWordToken> for str {
+impl<'a> BorrowFrom<SentenceWordToken<'a>> for str {
   #[inline]
-  fn borrow_from(owned: &SentenceWordToken) -> &str {
+  fn borrow_from<'b>(owned: &'b SentenceWordToken) -> &'b str {
     owned.token()
   }
 }
