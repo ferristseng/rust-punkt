@@ -11,8 +11,7 @@ static EXCLUDED_WORD_PREFIX: Set<char> = phf_set! { '(', '"', '`', '{', '[', ':'
   ';', '&', '#', '*', '@', ')', '}', ']', '-', ',' };
 
 /// Non-word Characters 
-static EXCLUDED_WORD_CHARS: Set<char> = phf_set! { '?', '!', ')', '"', ';', '}', 
-  ']', '*', ':', '@', '\'', '(', '{', '[' };
+static EXCLUDED_WORD_CHARS: Set<char> = phf_set! { '?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'', '(', '{', '[' };
 
 /// Takes a document and splits it into tokens. A token is the same token as defined 
 /// in NLTK. This tokenizer is heavily inspired by the one in NLTK, but tries to improve

@@ -1,3 +1,6 @@
+pub use token::word::SentenceWordToken;
+pub use token::training::TrainingToken;
+
 macro_rules! impl_flags(
   ($t:ident, $f:ty) => (
     impl WordTokenWithFlags for $t {
@@ -16,6 +19,6 @@ macro_rules! impl_flags(
   )
 );
 
-mod word;
-mod prelude;
-mod training;
+pub mod word;
+pub mod training;
+pub mod prelude;
