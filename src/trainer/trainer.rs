@@ -15,7 +15,7 @@ use token::prelude::{
   WordTypeToken
 };
 
-use tokenizer::TrainingWordTokenizer;
+use tokenizer::WordTokenizer;
 
 use ortho::{
   OrthographyPosition, 

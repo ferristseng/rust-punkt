@@ -13,8 +13,8 @@ static DEFAULT: PeriodContextTokenizerParameters = PeriodContextTokenizerParamet
 };
 
 pub struct PeriodContextTokenizerParameters {
-  non_word: &'static Set<char>,
-  sent_end: &'static Set<char>
+  pub non_word: &'static Set<char>,
+  pub sent_end: &'static Set<char>
 }
 
 impl Default for &'static PeriodContextTokenizerParameters {
@@ -27,7 +27,7 @@ impl Default for &'static PeriodContextTokenizerParameters {
 pub struct PeriodContextTokenizer<'a> {
   doc: &'a str,
   pos: uint,
-  params: &'a PeriodContextTokenizerParameters
+  pub params: &'a PeriodContextTokenizerParameters
 }
 
 impl<'a> PeriodContextTokenizer<'a> {
@@ -60,11 +60,12 @@ const STATE_UPDT_STT: u8 = 0b10000000; // Update the start token flag.
 const STATE_UPDT_RET: u8 = 0b01000000; // Update the position at end flag.
 
 impl<'a> Iterator for PeriodContextTokenizer<'a> {
-  type Item = (&'a str, &'a str, &'a str);
+  // (Entire slice of section, beginning of next break (if there is one),
+  // start of entire slice, end of entire slice)
+  type Item = (&'a str, uint, uint, uint);
 
-  fn next(&mut self) -> Option<(&'a str, &'a str, &'a str)> {
+  fn next(&mut self) -> Option<(&'a str, uint, uint, uint)> {
     let mut astart = self.pos;
-    let mut tstart = self.pos;
     let mut nstart = self.pos;
     let mut state: u8 = STATE_UPDT_STT;
 
@@ -83,9 +84,10 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
             }
 
             return Some((
-              self.doc.slice(astart, tstart),
-              self.doc.slice(tstart, end),
-              self.doc.slice(nstart, end)));
+              self.doc.slice(astart, end),
+              nstart,
+              astart,
+              end));
           }
         )
       );
@@ -124,11 +126,9 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
              state & STATE_TOKN_BEG == 0 => 
         {
           if c.is_whitespace() {
-            tstart = self.pos;
             state |= STATE_TOKN_BEG;
           } else if self.params.non_word.contains(&c) {
             // Setup positions for the return macro.
-            tstart = self.pos;
             self.pos += c.len_utf8();
             nstart = self.pos;
 
@@ -180,7 +180,7 @@ fn periodctxt_tokenizer_compare_nltk() {
       let exps = expf.split('\n');
       let tokr = PeriodContextTokenizer::new(rawf.as_slice());
 
-      for (t, e) in tokr.zip(exps) {
+      for ((t, _, _, _), e) in tokr.zip(exps) {
         assert!(true);
       }
     }

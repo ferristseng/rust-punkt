@@ -5,9 +5,9 @@ use phf::Set;
 
 /// Peforms a first pass annotation on a Token.
 pub fn annotate_first_pass<F, T: WordToken + WordTokenWithFlagsOps<F>>(
-  sent_end: &Set<char>,
+  tok: &mut T,
   data: &TrainingData,
-  tok: &mut T)
+  sent_end: &Set<char>)
 {
   let is_split_abbrev = tok
     .token()

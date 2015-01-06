@@ -10,7 +10,7 @@ use token::prelude::WordToken;
 
 use phf::Set;
 
-static DEFAULT: TrainingWordTokenizerParameters = TrainingWordTokenizerParameters {
+static DEFAULT: WordTokenizerParameters = WordTokenizerParameters {
   non_pref: &phf_set![
     '(', '"', '`', '{', '[', ':', ';', '&', '#', '*', '@', ')', '}', ']', '-', ','
   ],
@@ -20,26 +20,26 @@ static DEFAULT: TrainingWordTokenizerParameters = TrainingWordTokenizerParameter
 };
 
 #[derive(Copy)]
-pub struct TrainingWordTokenizerParameters {
-  non_pref: &'static Set<char>,
-  non_word: &'static Set<char>
+pub struct WordTokenizerParameters {
+  pub non_pref: &'static Set<char>,
+  pub non_word: &'static Set<char>
 }
 
-impl Default for &'static TrainingWordTokenizerParameters {
-  fn default() -> &'static TrainingWordTokenizerParameters {
+impl Default for &'static WordTokenizerParameters {
+  fn default() -> &'static WordTokenizerParameters {
     &DEFAULT
   }
 }
 
-pub struct TrainingWordTokenizer<'a> {
+pub struct WordTokenizer<'a> {
   pos: uint,
   doc: &'a str,
-  params: &'a TrainingWordTokenizerParameters
+  pub params: &'a WordTokenizerParameters
 }
 
-impl<'a> TrainingWordTokenizer<'a> {
-  pub fn new(doc: &'a str) -> TrainingWordTokenizer<'a> {
-    TrainingWordTokenizer {
+impl<'a> WordTokenizer<'a> {
+  pub fn new(doc: &'a str) -> WordTokenizer<'a> {
+    WordTokenizer {
       pos: 0,
       doc: doc,
       params: Default::default()
@@ -48,9 +48,9 @@ impl<'a> TrainingWordTokenizer<'a> {
 
   pub fn with_parameters(
     doc: &'a str, 
-    params: &'a TrainingWordTokenizerParameters
-  ) -> TrainingWordTokenizer<'a> {
-    TrainingWordTokenizer {
+    params: &'a WordTokenizerParameters
+  ) -> WordTokenizer<'a> {
+    WordTokenizer {
       pos: 0,
       doc: doc,
       params: params
@@ -63,7 +63,7 @@ const PARAGPH_START: u8 = 0b00000010;
 const CAPTURE_START: u8 = 0b00000100;
 const CAPTURE_COMMA: u8 = 0b00001000;
 
-impl<'a> Iterator for TrainingWordTokenizer<'a> {
+impl<'a> Iterator for WordTokenizer<'a> {
   type Item = TrainingToken;
 
   fn next(&mut self) -> Option<TrainingToken> {
@@ -267,7 +267,7 @@ fn word_tokenizer_compare_nltk() {
       let expf = fs::File::open(&path).read_to_string().unwrap();
       let rawf = fs::File::open(&rawp).read_to_string().unwrap();
       let exps = expf.split('\n');
-      let tokr = TrainingWordTokenizer::new(rawf.as_slice());
+      let tokr = WordTokenizer::new(rawf.as_slice());
 
       for (t, e) in tokr.zip(exps) {
         assert!(
@@ -284,7 +284,7 @@ fn word_tokenizer_compare_nltk() {
 #[bench]
 fn word_tokenizer_bench_short(b: &mut Bencher) {
   b.iter(|| {
-    let _: Vec<TrainingToken> = TrainingWordTokenizer::new(
+    let _: Vec<TrainingToken> = WordTokenizer::new(
       include_str!("../../test/raw/sigma-wiki.txt")).collect();
   })
 }
@@ -292,7 +292,7 @@ fn word_tokenizer_bench_short(b: &mut Bencher) {
 #[bench]
 fn word_tokenizer_bench_long(b: &mut Bencher) {
   b.iter(|| {
-    let _: Vec<TrainingToken> = TrainingWordTokenizer::new(
+    let _: Vec<TrainingToken> = WordTokenizer::new(
       include_str!("../../test/raw/the-sayings-of-confucius.txt")).collect();
   })
 }
@@ -300,7 +300,7 @@ fn word_tokenizer_bench_long(b: &mut Bencher) {
 #[bench]
 fn word_tokenizer_bench_very_long(b: &mut Bencher) {
   b.iter(|| {
-    let _: Vec<TrainingToken> = TrainingWordTokenizer::new(
+    let _: Vec<TrainingToken> = WordTokenizer::new(
       include_str!("../../test/raw/pride-and-prejudice.txt")).collect();
   })
 }
