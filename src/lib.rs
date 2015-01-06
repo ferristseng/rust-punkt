@@ -30,19 +30,24 @@ extern crate collections;
 
 pub mod token;
 pub mod tokenizer;
-//pub mod trainer;
+pub mod trainer;
 
-/*
 mod prelude {
-  use trainer::Data;
-  use tokenizer::Token;
+  use trainer::TrainingData;
+
+  use token::prelude::{
+    WordTypeToken,
+    WordTokenWithFlagsOps,
+  };
 
   pub trait PunktFirstPassAnnotater {
-    fn data(&self) -> &Data;
+    fn data(&self) -> &TrainingData;
 
     /// Peforms a first pass annotation on a Token.
-    #[inline]
-    fn annotate_first_pass(&self, t: &mut Token) {
+    fn annotate_first_pass<F, T: WordTypeToken + WordTokenWithFlagsOps<F>>(
+      &self, 
+      t: &mut T) 
+    {
       let is_split_abbrev = t
         .typ()
         .rsplitn(1, '-')
@@ -50,19 +55,18 @@ mod prelude {
         .map(|s| self.data().contains_abbrev(s))
         .unwrap_or(false);
 
-      // Since this is where abbreviations are decided, `has_final_period` should 
-      // return whether or not the original token has a period.
-      if t.has_final_period() && 
-         !t.is_ellipsis() &&
-         (self.data().contains_abbrev(t.typ_without_period()) || 
-          is_split_abbrev)
-      {
-        t.set_abbrev(true);
+      if true {
+        t.set_is_sentence_break(true);
+      } else if t.has_final_period() && !t.is_ellipsis() {
+        if is_split_abbrev {
+          t.set_is_abbrev(true);
+        } else {
+          t.set_is_sentence_break(true);
+        }
       }
     }
   }
 }
-*/
 
 mod ortho {
   use phf::Map;
@@ -114,20 +118,20 @@ mod ortho {
   };
 }
  
-/*
 mod iter {
   /// Iterates over every PuntkToken from the supplied iterator and returns 
   /// the immediate following token. Returns None for the following token on the 
   /// last token.
-  pub struct ConsecutiveTokenIterator<'a, T: 'a, I: Iterator<&'a T>> {
+  pub struct ConsecutiveTokenIterator<'a, T: 'a, I: Iterator<Item = &'a T>> {
     iter: I,
     last: Option<&'a T>
   }
 
-  impl<'a, T: 'a, I: Iterator<&'a T>> Iterator<(&'a T, Option<&'a T>)>
+  impl<'a, T: 'a, I: Iterator<Item = &'a T>> Iterator
   for ConsecutiveTokenIterator<'a, T, I>
   {
-    /// Returns pairs of consecutive tokens.
+    type Item = (&'a T, Option<&'a T>); 
+
     #[inline]
     fn next(&mut self) -> Option<(&'a T, Option<&'a T>)> {
       match self.last {
@@ -153,9 +157,8 @@ mod iter {
     }
   }
 
-  /// Constructor for a consecutive token iterator.
   #[inline]
-  pub fn consecutive_token_iter<'a, T, I: Iterator<&'a T>>(
+  pub fn consecutive_token_iter<'a, T, I: Iterator<Item = &'a T>>(
     iter: I
   ) -> ConsecutiveTokenIterator<'a, T, I> {
     ConsecutiveTokenIterator { iter: iter, last: None }
@@ -164,15 +167,16 @@ mod iter {
   /// Iterates over every Token from the supplied iterator, and returns the 
   /// immediate following token. Returns None for the following token on the last 
   /// token.
-  pub struct ConsecutiveTokenMutIterator<'a, T: 'a, I: Iterator<&'a mut T>> {
+  pub struct ConsecutiveTokenMutIterator<'a, T: 'a, I: Iterator<Item = &'a mut T>> {
     iter: I,
     last: Option<*mut T>
   }
 
-  impl<'a, T: 'a, I: Iterator<&'a mut T>> Iterator<(&'a mut T, Option<&'a mut T>)>
+  impl<'a, T: 'a, I: Iterator<Item = &'a mut T>> Iterator
   for ConsecutiveTokenMutIterator<'a, T, I>
   {
-    /// Returns pairs of consecutive tokens.
+    type Item = (&'a mut T, Option<&'a mut T>);
+
     #[inline]
     fn next(&mut self) -> Option<(&'a mut T, Option<&'a mut T>)> {
       match self.last {
@@ -198,12 +202,10 @@ mod iter {
     }
   }
 
-  /// Constructor for a mutable consecutive token iterator.
   #[inline]
-  pub fn consecutive_token_iter_mut<'a, T, I: Iterator<&'a mut T>>(
+  pub fn consecutive_token_iter_mut<'a, T, I: Iterator<Item = &'a mut T>>(
     iter: I
   ) -> ConsecutiveTokenMutIterator<'a, T, I> {
     ConsecutiveTokenMutIterator { iter: iter, last: None }
   }
 }
-*/

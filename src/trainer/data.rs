@@ -25,7 +25,7 @@ use rustc_serialize::json::Json;
 /// let ger_data = Data::german();
 /// ``` 
 #[derive(Show)]
-pub struct PunktData {
+pub struct TrainingData {
   abbrev_types: HashSet<String, XXHasher>,
   collocations: HashMap<String, HashSet<String, XXHasher>, XXHasher>,
   sentence_starters: HashSet<String, XXHasher>,
@@ -35,9 +35,9 @@ pub struct PunktData {
 // Macro for generating functions to load precompiled data.
 macro_rules! preloaded_data(
   ($lang:ident, $file:expr) => (
-    impl PunktData {
+    impl TrainingData {
       #[inline]
-      pub fn $lang() -> PunktData {
+      pub fn $lang() -> TrainingData {
         FromStr::from_str(include_str!($file)).unwrap()
       }
     }
@@ -62,7 +62,7 @@ preloaded_data!(spanish, "data/spanish.json");
 preloaded_data!(swedish, "data/swedish.json");
 preloaded_data!(turkish, "data/turkish.json");
 
-impl PunktData {
+impl TrainingData {
   /// Returns the inner representation of compiled abbreviation types.
   #[inline]
   fn abbrev_types(&self) -> &HashSet<String, XXHasher> {
@@ -316,10 +316,10 @@ impl PunktData {
   }
 }
 
-impl Default for PunktData {
-  /// Returns a default PunktData object with no data.
-  fn default() -> PunktData {
-    PunktData {
+impl Default for TrainingData {
+  /// Returns a default TrainingData object with no data.
+  fn default() -> TrainingData {
+    TrainingData {
       abbrev_types: HashSet::with_hasher(XXHasher::new()),
       collocations: HashMap::with_hasher(XXHasher::new()),
       sentence_starters: HashSet::with_hasher(XXHasher::new()),
@@ -328,12 +328,12 @@ impl Default for PunktData {
   }
 }
 
-impl FromStr for PunktData {
-  /// Deserializes JSON and loads the data into a new PunktData object.
-  fn from_str(s: &str) -> Option<PunktData> {
+impl FromStr for TrainingData {
+  /// Deserializes JSON and loads the data into a new TrainingData object.
+  fn from_str(s: &str) -> Option<TrainingData> {
     match Json::from_str(s) {
       Ok(Json::Object(mut obj)) => {
-        let mut data: PunktData = Default::default();
+        let mut data: TrainingData = Default::default();
 
         // Macro that gets a Json array by a path on the object. Then does a 
         // pattern match on a specified pattern, and runs a specified action.
@@ -398,14 +398,16 @@ impl FromStr for PunktData {
   }
 }
 
-/// Iterator for collocations stored in PunktData. Uses a recursive algorithm to 
-/// generate next items from internal collocation collection in PunktData.
+/// Iterator for collocations stored in TrainingData. Uses a recursive algorithm to 
+/// generate next items from internal collocation collection in TrainingData.
 pub struct CollocationsIterator<'a> {
   iter: HashMapIter<'a, String, HashSet<String, XXHasher>>,
   cur: Option<(&'a String, HashSetIter<'a String>)>
 }
 
-impl<'a> Iterator<(&'a str, &'a str)> for CollocationsIterator<'a> {
+impl<'a> Iterator for CollocationsIterator<'a> {
+  type Item = (&'a str, &'a str);
+
   #[inline]
   fn next<'b>(&'b mut self) -> Option<(&'a str, &'a str)> {
     let mut recurse = false;
@@ -439,18 +441,12 @@ impl<'a> Iterator<(&'a str, &'a str)> for CollocationsIterator<'a> {
   }
 }
 
-#[cfg(test)]
-mod punkt_data_tests {
-  use std::str::FromStr;
-  use super::PunktData;
+#[test]
+fn test_data_load_from_json_test() {
+  let data: TrainingData = FromStr::from_str(include_str!("data/english.json")).unwrap();
 
-  #[test]
-  fn smoke_test_punkt_data_load_from_json_test() {
-    let data: PunktData = FromStr::from_str(include_str!("data/english.json")).unwrap();
-
-    assert!(data.orthographic_context().len() > 0);
-    assert!(data.abbrev_types().len() > 0);
-    assert!(data.sentence_starters().len() > 0);
-    assert!(data.collocations().len() > 0);
-  }
+  assert!(data.orthographic_context().len() > 0);
+  assert!(data.abbrev_types().len() > 0);
+  assert!(data.sentence_starters().len() > 0);
+  assert!(data.collocations().len() > 0);
 }

@@ -19,6 +19,7 @@ static DEFAULT: TrainingWordTokenizerParameters = TrainingWordTokenizerParameter
   ]
 };
 
+#[derive(Copy)]
 pub struct TrainingWordTokenizerParameters {
   non_pref: &'static Set<char>,
   non_word: &'static Set<char>
@@ -285,6 +286,14 @@ fn word_tokenizer_bench_short(b: &mut Bencher) {
   b.iter(|| {
     let _: Vec<TrainingToken> = TrainingWordTokenizer::new(
       include_str!("../../test/raw/sigma-wiki.txt")).collect();
+  })
+}
+
+#[bench]
+fn word_tokenizer_bench_long(b: &mut Bencher) {
+  b.iter(|| {
+    let _: Vec<TrainingToken> = TrainingWordTokenizer::new(
+      include_str!("../../test/raw/the-sayings-of-confucius.txt")).collect();
   })
 }
 

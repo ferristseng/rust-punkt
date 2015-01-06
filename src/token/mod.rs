@@ -19,6 +19,6 @@ macro_rules! impl_flags(
   )
 );
 
-pub mod word;
-pub mod training;
+mod word;
+mod training;
 pub mod prelude;
