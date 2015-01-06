@@ -1,4 +1,8 @@
-use std::ops::Slice;
+#[cfg(test)] use test::Bencher;
+#[cfg(test)] use std::io::fs;
+#[cfg(test)] use std::io::fs::PathExtensions;
+#[cfg(test)] use token::prelude::WordTypeToken;
+
 use std::default::Default;
 
 use phf::Set;
@@ -169,25 +173,18 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
 }
 
 #[test]
-fn test_word_tokenizer() {
-  let iter = PeriodContextTokenizer {
-    pos: 0,
-    //doc: include_str!("../../test/raw/npr-article-01.txt"),
-    doc: include_str!("../../test/raw/ny-times-article-01.txt"),
-    params: Default::default()
-  };
+fn periodctxt_tokenizer_compare_nltk() {
+  for path in fs::walk_dir(&Path::new("test/word-periodctxt/")).unwrap() {
+    if path.is_file() {
+      let rawp = Path::new("test/raw/").join(path.filename_str().unwrap());
+      let expf = fs::File::open(&path).read_to_string().unwrap();
+      let rawf = fs::File::open(&rawp).read_to_string().unwrap();
+      let exps = expf.split('\n');
+      let tokr = PeriodContextTokenizer::new(rawf.as_slice());
 
-  let collect: Vec<(&str, &str, &str)> = iter.collect();
-
-  println!("");
-
-  for &(ref t, ref c0, ref c1) in collect.iter() {
-    println!(
-      "('{}', '{}', '{}')", 
-      t,
-      c0.escape_default(), 
-      c1.escape_default());
+      for (t, e) in tokr.zip(exps) {
+        assert!(true);
+      }
+    }
   }
-
-  assert!(false);
 }

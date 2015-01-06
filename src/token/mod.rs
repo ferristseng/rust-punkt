@@ -1,4 +1,4 @@
-pub use token::word::SentenceWordToken;
+pub use token::sword::SentenceWordToken;
 pub use token::training::TrainingToken;
 
 macro_rules! impl_flags(
@@ -19,6 +19,6 @@ macro_rules! impl_flags(
   )
 );
 
-mod word;
+mod sword;
 mod training;
 pub mod prelude;

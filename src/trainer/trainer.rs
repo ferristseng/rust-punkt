@@ -20,8 +20,8 @@ use tokenizer::TrainingWordTokenizer;
 use ortho::{
   OrthographyPosition, 
   OrthographicContext,
-  BEGIN_UC, 
-  MIDDLE_UC, 
+  BEG_UC, 
+  MID_UC, 
   ORTHO_MAP};
 
 /// A collocation. A normal Tuple can not be used, because a collocation
@@ -413,7 +413,7 @@ fn is_rare_abbrev_type(
         .unwrap_or(&0);
 
       // Check the final condition
-      if (ctxt & BEGIN_UC > 0) && !(ctxt & MIDDLE_UC > 0) {
+      if (ctxt & BEG_UC > 0) && !(ctxt & MID_UC > 0) {
         true
       } else {
         false
