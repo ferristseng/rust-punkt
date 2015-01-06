@@ -19,10 +19,10 @@ use rustc_serialize::json::Json;
 /// Precompiled data can be loaded via a language specific constructor.
 ///
 /// ```
-/// use punkt::trainer::Data;
+/// use punkt::trainer::TrainingData;
 ///
-/// let eng_data = Data::english();
-/// let ger_data = Data::german();
+/// let eng_data = TrainingData::english();
+/// let ger_data = TrainingData::german();
 /// ``` 
 #[derive(Show)]
 pub struct TrainingData {

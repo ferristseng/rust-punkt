@@ -1,7 +1,5 @@
-#[cfg(test)] use test::Bencher;
 #[cfg(test)] use std::io::fs;
 #[cfg(test)] use std::io::fs::PathExtensions;
-#[cfg(test)] use token::prelude::WordTypeToken;
 
 use std::default::Default;
 

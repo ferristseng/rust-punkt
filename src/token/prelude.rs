@@ -1,4 +1,4 @@
-#[cfg(test)] use token::word::SentenceWordToken;
+#[cfg(test)] use token::sword::SentenceWordToken;
 #[cfg(test)] use token::training::TrainingToken;
 
 use std::ops::Slice;
