@@ -1,15 +1,7 @@
-/*
-pub use tokenizer::word::PunktWordTokenizer as WordTokenizer;
-pub use tokenizer::sentence::PunktSentenceTokenizer as SentenceTokenizer;
-pub use tokenizer::token::PunktToken as Token;
-*/
-
 pub use tokenizer::training::{
   TrainingWordTokenizer, 
   TrainingWordTokenizerParameters};
 
-//mod word;
-//mod token;
 mod sentence;
-mod word;
+mod periodctxt;
 mod training;

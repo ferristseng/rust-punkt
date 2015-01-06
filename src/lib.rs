@@ -46,7 +46,7 @@ mod prelude {
     /// Peforms a first pass annotation on a Token.
     fn annotate_first_pass<F, T: WordTypeToken + WordTokenWithFlagsOps<F>>(
       &self, 
-      t: &mut T) 
+      t: &mut T)
     {
       let is_split_abbrev = t
         .typ()
