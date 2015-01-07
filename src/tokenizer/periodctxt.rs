@@ -51,6 +51,38 @@ impl<'a> PeriodContextTokenizer<'a> {
       params: params
     }
   }
+
+  /// Performs a lookahead to see if a sentence ending character is actually
+  /// the end of the token. If it is the end, `None` is returned. Otherwise,
+  /// return `Some(x)` where `x` is the new position to iterate to.
+  fn lookahead_is_token(&self) -> Option<uint> {
+    let mut pos = self.pos;
+
+    while pos < self.doc.len() {
+      let cur = self.doc.char_at(pos);
+
+      match cur {
+        // A whitespace is reached before a sentence ending character 
+        // that could signal the continuation of a token is.
+        c if c.is_whitespace() => return None,
+        // A sentence ending is reached. Check if it could be the beginning 
+        // of a new token (if there is a space after it, or if the next 
+        // character is puntuation). 
+        c if self.params.sent_end.contains(&c) => {
+          let nxt = self.doc.char_at(pos + cur.len_utf8());
+
+          if nxt.is_whitespace() || self.params.non_word.contains(&nxt) {
+            break;
+          }
+        }
+        _ => ()
+      }
+
+      pos += cur.len_utf8();
+    }
+
+    Some(pos)
+  }
 }
 
 const STATE_SENT_END: u8 = 0b00000001; // Hit a sentence end state.
@@ -139,27 +171,10 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
             self.pos += c.len_utf8();
             nstart = self.pos;
 
-            let mut tmp_pos = self.pos;
-
-            while tmp_pos < self.doc.len() {
-              let cur0 = self.doc.char_at(tmp_pos);
-
-              match cur0 {
-                c if c.is_whitespace() => return_token!(),
-                c if self.params.sent_end.contains(&c) => {
-                  let nxt = self.doc.char_at(tmp_pos + cur0.len_utf8());
-
-                  if nxt.is_whitespace() || self.params.non_word.contains(&nxt) {
-                    break;
-                  }
-                }
-                _ => ()
-              }
-
-              tmp_pos += cur0.len_utf8();
+            match self.lookahead_is_token() {
+              Some(x) => self.pos = x,
+              None    => return_token!() 
             }
-
-            self.pos = tmp_pos;
           } else if !self.params.sent_end.contains(&c) { 
             state ^= STATE_SENT_END;
           }
@@ -208,15 +223,14 @@ fn periodctxt_tokenizer_compare_nltk() {
       let tokr = PeriodContextTokenizer::new(rawf.as_slice());
 
       for ((t, _, _, _), e) in tokr.zip(exps) {
-        let n = t.replace("\n", r"\n").replace("\r", "");
-
-        println!("{}", n);
+        let t = t.replace("\n", r"\n").replace("\r", "");
+        let e = e.replace("\r", "");
 
         assert!(
-          n == e, 
+          t == e, 
           "{} - you: [{}] != exp: [{}]",
           path.filename_str().unwrap(),
-          n,
+          t,
           e);
       }
     }
