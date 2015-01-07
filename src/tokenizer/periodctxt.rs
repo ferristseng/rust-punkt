@@ -93,11 +93,12 @@ const STATE_UPDT_RET: u8 = 0b01000000; // Update the position at end flag.
 
 impl<'a> Iterator for PeriodContextTokenizer<'a> {
   // (Entire slice of section, beginning of next break (if there is one),
-  // start of entire slice, end of entire slice)
+  // start of whitespace before next token, end of entire slice)
   type Item = (&'a str, uint, uint, uint);
 
   fn next(&mut self) -> Option<(&'a str, uint, uint, uint)> {
     let mut astart = self.pos;
+    let mut wstart = self.pos;
     let mut nstart = self.pos;
     let mut state: u8 = 0;
 
@@ -118,7 +119,7 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
             return Some((
               self.doc.slice(astart, end),
               nstart,
-              astart,
+              wstart,
               end));
           }
         )
@@ -166,6 +167,7 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
         {
           if c.is_whitespace() {
             state |= STATE_TOKN_BEG;
+            wstart = self.pos;
           } else if self.params.non_word.contains(&c) {
             // Setup positions for the return macro.
             self.pos += c.len_utf8();

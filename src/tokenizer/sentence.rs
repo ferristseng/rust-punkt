@@ -37,7 +37,7 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
   fn next(&mut self) -> Option<&'a str> {
     loop {
       match self.iter.next() {
-        Some((slice, tok_start, _, slice_end)) => {
+        Some((slice, tok_start, ws_start, slice_end)) => {
           let mut has_sentence_break = false;
 
           // Get word tokens in the slice. If any of them has a sentence break,
@@ -55,13 +55,13 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
           if has_sentence_break {
             let start = self.last;
 
-            if tok_start == slice_end {
+            return if tok_start == slice_end {
               self.last = slice_end;
+              Some(self.doc.slice(start, slice_end))
             } else {
               self.last = tok_start;
+              Some(self.doc.slice(start, ws_start))
             }
-
-            return Some(self.doc.slice(start, slice_end));
           }
         }
         None => break
@@ -75,4 +75,20 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
   fn size_hint(&self) -> (uint, Option<uint>) {
     (self.doc.len() / 10, None)
   }
+}
+
+#[test]
+fn test_sentence_tokenizer() {
+  let data = TrainingData::english();
+  let mut stok = SentenceTokenizer::new(
+    include_str!("../../test/raw/npr-article-01.txt"), 
+    &data);
+
+  println!("");
+
+  for s in stok {
+    println!("[{}]", s.escape_default());
+  }
+
+  assert!(false);
 }
