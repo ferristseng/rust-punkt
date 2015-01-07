@@ -12,11 +12,14 @@ use freqdist::{Distribution, FrequencyDistribution};
 use token::TrainingToken;
 use token::prelude::{
   WordToken,
-  WordTypeToken
+  WordTypeToken,
+  WordTokenWithFlagsOps,
+  WordTokenWithFlagsOpsExt,
 };
 
+use util;
 use tokenizer::WordTokenizer;
-
+use trainer::data::TrainingData;
 use ortho::{
   OrthographyPosition, 
   OrthographicContext,
@@ -112,7 +115,6 @@ impl Default for &'static TrainerParameters {
   }
 }
 
-/*
 /// Trainer to compile data about frequent sentence staters, collocations, 
 /// and potential abbreviations.
 ///
@@ -146,34 +148,34 @@ pub struct Trainer<'a> {
 
   /// The training data. This data object is modified as new tokens 
   /// are trained on.
-  data: &'a mut Data,
+  data: &'a mut TrainingData,
 
   /// Trainer parameters.
   parameters: &'a TrainerParameters,
 
   /// A list of all tokens encountered. Other fields reference Tokens
   /// from here.
-  tokens: Vec<Rc<Token>>,
+  tokens: Vec<Rc<TrainingToken>>,
 
   /// A frequency distribution of all Tokens encountered.
-  type_fdist: FrequencyDistribution<Rc<Token>>,
+  type_fdist: FrequencyDistribution<Rc<TrainingToken>>,
 
   /// A frequency distribution of all collocations encountered.
-  collocation_fdist: FrequencyDistribution<TrainerCollocation>,
+  collocation_fdist: FrequencyDistribution<Collocation<Rc<TrainingToken>>>,
 
   /// A frequency distribution of all sentence starters encountered.
-  sentence_starter_fdist: FrequencyDistribution<Rc<Token>>
+  sentence_starter_fdist: FrequencyDistribution<Rc<TrainingToken>>
 }
 
 impl<'a> Trainer<'a> {
   #[inline]
-  pub fn with_data(data: &'a mut Data) -> Trainer<'a> {
+  pub fn with_data(data: &'a mut TrainingData) -> Trainer<'a> {
     Trainer::with_data_and_parameters(data, Default::default())
   }
 
   #[inline]
   pub fn with_data_and_parameters(
-    data: &'a mut Data, 
+    data: &'a mut TrainingData, 
     params: &'a TrainerParameters
   ) -> Trainer<'a> {
     Trainer {
@@ -194,12 +196,12 @@ impl<'a> Trainer<'a> {
   /// self needs to be borrowed. It can be reasoned generally that iterating over
   /// a part of `self` that isn't `data` makes it safe to modify `data` in most cases.
   #[inline]
-  unsafe fn borrow_data_mut_unsafe(&self) -> &mut Data {
-    &mut *(&*self.data as *const Data as *mut Data)
+  unsafe fn borrow_data_mut_unsafe(&self) -> &mut TrainingData {
+    &mut *(&*self.data as *const TrainingData as *mut TrainingData)
   }
 
   /// Train on a series of Tokens. 
-  pub fn train_tokens(&mut self, tokens: Vec<Token>) {
+  pub fn train_tokens(&mut self, tokens: Vec<TrainingToken>) {
     let start = self.tokens.len();
 
     self.tokens.reserve(tokens.len());
@@ -236,8 +238,10 @@ impl<'a> Trainer<'a> {
       // Rc doesn't provide a mutable interface into a Token by default. 
       // We have to coerce the Token into being mutable.
       unsafe {
-        self.annotate_first_pass(
-          &mut *(t.deref() as *const Token as *mut Token)); 
+        util::annotate_first_pass(
+          &mut *(t.deref() as *const TrainingToken as *mut TrainingToken),
+          self.data,
+          &phf_set![]); 
       }
     }
 
@@ -311,15 +315,8 @@ impl<'a> Trainer<'a> {
   }
 }
 
-impl<'a> PunktFirstPassAnnotater for Trainer<'a> {
-  #[inline]
-  fn data(&self) -> &Data {
-    &*self.data
-  }
-}
-
 #[inline]
-fn reclassify_iter<'a, 'b, I: Iterator<&'a Rc<Token>>>(
+fn reclassify_iter<'a, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>>(
   trainer: &'b Trainer<'b>,
   iter: I
 ) -> PunktReclassifyIterator<'a, 'b, I> {
@@ -327,14 +324,18 @@ fn reclassify_iter<'a, 'b, I: Iterator<&'a Rc<Token>>>(
 }
 
 #[inline]
-fn orthography_iter<'a, I: Iterator<&'a Rc<Token>>>(
+fn orthography_iter<'a, I: Iterator<Item = &'a Rc<TrainingToken>>>(
   iter: I
 ) -> TokenWithContextIterator<'a, I> {
   TokenWithContextIterator { iter: iter, ctxt: OrthographyPosition::Internal }
 }
 
 #[inline]
-fn potential_sentence_starter_iter<'a, 'b, I: Iterator<&'a Rc<Token>>>(
+fn potential_sentence_starter_iter<
+  'a, 
+  'b, 
+  I: Iterator<Item = &'a Rc<TrainingToken>>>
+(
   trainer: &'b Trainer,
   iter: I
 ) -> PotentialSentenceStartersIterator<'a, 'b, I> {
@@ -342,11 +343,29 @@ fn potential_sentence_starter_iter<'a, 'b, I: Iterator<&'a Rc<Token>>>(
 }
 
 #[inline]
-fn potential_collocation_iter<'a, 'b, I: Iterator<&'a TrainerCollocation>>(
+fn potential_collocation_iter<
+  'a, 
+  'b, 
+  I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>>
+(
   trainer: &'b Trainer,
   iter: I
 ) -> PotentialCollocationsIterator<'a, 'b, I> {
   PotentialCollocationsIterator { iter: iter, trainer: trainer }
+}
+
+#[inline]
+fn consecutive_token_iter_mut<'a, T, I: Iterator<Item = &'a mut T>>(
+  iter: I
+) -> ConsecutiveTokenMutIterator<'a, T, I> {
+  ConsecutiveTokenMutIterator { iter: iter, last: None }
+}
+
+#[inline]
+fn consecutive_token_iter<'a, T, I: Iterator<Item = &'a T>>(
+  iter: I
+) -> ConsecutiveTokenIterator<'a, T, I> {
+  ConsecutiveTokenIterator { iter: iter, last: None }
 }
 
 /// From the original paper.
@@ -366,7 +385,9 @@ fn col_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64) -> f64 
   let p2 = (count_b - count_ab) / (n - count_a);
 
   let s1 = count_ab * p.ln() + (count_a - count_ab) * (1.0 - p).ln();
-  let s2 = (count_b - count_ab) * p.ln() + (n - count_a - count_b + count_ab) * (1.0 - p).ln();
+  let s2 = (count_b - count_ab) * p.ln() + 
+           (n - count_a - count_b + count_ab) * 
+           (1.0 - p).ln();
   let s3 = if count_a == count_ab {
     0f64
   } else {
@@ -375,7 +396,10 @@ fn col_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64) -> f64 
   let s4 = if count_b == count_ab {
     0f64
   } else {
-    (count_b - count_ab) * p2.ln() + (n - count_a - count_b + count_ab) * (1.0 - p2).ln()
+    (count_b - count_ab) * 
+    p2.ln() + 
+    (n - count_a - count_b + count_ab) * 
+    (1.0 - p2).ln()
   };
 
   -2.0 * (s1 + s2 - s3 - s4)
@@ -383,8 +407,8 @@ fn col_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64) -> f64 
 
 fn is_rare_abbrev_type(
   trainer: &Trainer,
-  tok0: &Token, 
-  tok1: &Token
+  tok0: &TrainingToken, 
+  tok1: &TrainingToken
 ) -> bool {
   if tok0.is_abbrev() || !tok0.is_sentence_break() {
     // Check the first condition, and return if it matches
@@ -408,7 +432,7 @@ fn is_rare_abbrev_type(
       true
     } else if tok1.is_lowercase() {
       let ctxt = *trainer
-        .data()
+        .data
         .get_orthographic_context(tok1.typ_without_break_or_period())
         .unwrap_or(&0);
 
@@ -426,8 +450,8 @@ fn is_rare_abbrev_type(
 
 #[inline]
 fn is_potential_sentence_starter(
-  cur: &Token, 
-  prev: &Token
+  cur: &TrainingToken, 
+  prev: &TrainingToken
 ) -> bool {
   prev.is_sentence_break() && 
   !(prev.is_numeric() || prev.is_initial()) && 
@@ -437,8 +461,8 @@ fn is_potential_sentence_starter(
 #[inline]
 fn is_potential_collocation(
   trainer: &Trainer,
-  tok0: &Token,
-  tok1: &Token
+  tok0: &TrainingToken,
+  tok1: &TrainingToken
 ) -> bool {
   (trainer.parameters.include_all_collocations ||
   (trainer.parameters.include_abbrev_collocations && tok0.is_abbrev()) ||
@@ -448,18 +472,20 @@ fn is_potential_collocation(
 }
 
 /// A token and its associated score (likelihood of it being a abbreviation).
-type ScoredToken<'a> = (&'a Token, f64);
+type ScoredToken<'a> = (&'a TrainingToken, f64);
 
 /// Iterates over every Token from the supplied iterator. Only returns 
 /// the ones that are 'not obviously' abbreviations. Also returns the associated 
 /// score of that token.
-struct PunktReclassifyIterator<'a: 'b, 'b, I: Iterator<&'a Rc<Token>>> {
+struct PunktReclassifyIterator<'a: 'b, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>> {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I: Iterator<&'a Rc<Token>>> Iterator<ScoredToken<'a>> 
+impl<'a, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>> Iterator 
 for PunktReclassifyIterator<'a, 'b, I> {
+  type Item = ScoredToken<'a>;
+
   #[inline]
   fn next(&mut self) -> Option<ScoredToken<'a>> {
     loop {
@@ -475,11 +501,11 @@ for PunktReclassifyIterator<'a, 'b, I> {
           }
 
           if t.has_final_period() {
-            if self.trainer.data().contains_abbrev(t.typ()) {
+            if self.trainer.data.contains_abbrev(t.typ()) {
               continue;
             }
           } else {
-            if !self.trainer.data().contains_abbrev(t.typ()) {
+            if !self.trainer.data.contains_abbrev(t.typ()) {
               continue;
             }
           }
@@ -530,18 +556,20 @@ for PunktReclassifyIterator<'a, 'b, I> {
 }
 
 /// Token annotated with its orthographic context.
-type TokenWithContext<'a> = (&'a Token, OrthographicContext);
+type TokenWithContext<'a> = (&'a TrainingToken, OrthographicContext);
 
 /// Iterates over every Token from the supplied iterator and returns its
 /// decided orthography within the given text. 
-struct TokenWithContextIterator<'a, I: Iterator<&'a Rc<Token>>> {
+struct TokenWithContextIterator<'a, I: Iterator<Item = &'a Rc<TrainingToken>>> {
   iter: I,
   ctxt: OrthographyPosition
 }
 
-impl<'a, I: Iterator<&'a Rc<Token>>> Iterator<TokenWithContext<'a>>
+impl<'a, I: Iterator<Item = &'a Rc<TrainingToken>>> Iterator 
 for TokenWithContextIterator<'a, I>
 {
+  type Item = TokenWithContext<'a>;
+
   /// Returns tokens annotated with their OrthographicContext. Must keep track 
   /// and modify internal position of where previous tokens were.
   #[inline]
@@ -588,20 +616,25 @@ for TokenWithContextIterator<'a, I>
 
 /// Iterates over every potential Collocation (determined by log likelihood).
 /// Also returns the likelihood of the potential collocation.
-struct PotentialCollocationsIterator<'a, 'b, I: Iterator<&'a TrainerCollocation>> 
+struct PotentialCollocationsIterator<
+  'a, 
+  'b, 
+  I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>> 
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I: Iterator<&'a TrainerCollocation>> Iterator<(&'a TrainerCollocation, f64)>
+impl<'a, 'b, I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>> Iterator
 for PotentialCollocationsIterator<'a, 'b, I> {
+  type Item = (&'a Collocation<Rc<TrainingToken>>, f64);
+
   #[inline]
-  fn next(&mut self) -> Option<(&'a TrainerCollocation, f64)> {
+  fn next(&mut self) -> Option<(&'a Collocation<Rc<TrainingToken>>, f64)> {
     loop {
       match self.iter.next() {
         Some(col) => {
-          if self.trainer.data().contains_sentence_starter(
+          if self.trainer.data.contains_sentence_starter(
             col.right().typ_without_break_or_period()) 
           {
             continue;    
@@ -646,14 +679,19 @@ for PotentialCollocationsIterator<'a, 'b, I> {
   }
 }
 
-struct PotentialSentenceStartersIterator<'a, 'b, I: Iterator<&'a Rc<Token>>>
+struct PotentialSentenceStartersIterator<
+  'a, 
+  'b, 
+  I: Iterator<Item = &'a Rc<TrainingToken>>>
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I: Iterator<&'a Rc<Token>>> Iterator<ScoredToken<'a>>
+impl<'a, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>> Iterator
 for PotentialSentenceStartersIterator<'a, 'b, I> {
+  type Item = ScoredToken<'a>;
+
   #[inline]
   fn next(&mut self) -> Option<ScoredToken<'a>> {
     loop {
@@ -691,4 +729,79 @@ for PotentialSentenceStartersIterator<'a, 'b, I> {
     self.iter.size_hint()
   }
 }
-*/
+
+/// Iterates over every PuntkToken from the supplied iterator and returns 
+/// the immediate following token. Returns None for the following token on the 
+/// last token.
+struct ConsecutiveTokenIterator<'a, T: 'a, I: Iterator<Item = &'a T>> {
+  iter: I,
+  last: Option<&'a T>
+}
+
+impl<'a, T: 'a, I: Iterator<Item = &'a T>> Iterator
+for ConsecutiveTokenIterator<'a, T, I>
+{
+  type Item = (&'a T, Option<&'a T>); 
+
+  #[inline]
+  fn next(&mut self) -> Option<(&'a T, Option<&'a T>)> {
+    match self.last {
+      Some(tok) => {
+        self.last = self.iter.next();
+
+        Some((tok, self.last))
+      }
+      None => match self.iter.next() {
+        Some(tok) => {
+          self.last = self.iter.next();
+
+          Some((tok, self.last))
+        }
+        None => None
+      }
+    }
+  }
+
+  #[inline]
+  fn size_hint(&self) -> (uint, Option<uint>) {
+    self.iter.size_hint()
+  }
+}
+
+/// Iterates over every Token from the supplied iterator, and returns the 
+/// immediate following token. Returns None for the following token on the last 
+/// token.
+struct ConsecutiveTokenMutIterator<'a, T: 'a, I: Iterator<Item = &'a mut T>> {
+  iter: I,
+  last: Option<*mut T>
+}
+
+impl<'a, T: 'a, I: Iterator<Item = &'a mut T>> Iterator
+for ConsecutiveTokenMutIterator<'a, T, I>
+{
+  type Item = (&'a mut T, Option<&'a mut T>);
+
+  #[inline]
+  fn next(&mut self) -> Option<(&'a mut T, Option<&'a mut T>)> {
+    match self.last {
+      Some(tok) => {
+        self.last = self.iter.next().map(|t| t as *mut T);
+
+        unsafe { Some((&mut *tok, self.last.map(|t| &mut *t))) }
+      }
+      None => match self.iter.next() {
+        Some(tok) => {
+          self.last = self.iter.next().map(|t| t as *mut T);
+
+          unsafe { Some((&mut *tok, self.last.map(|t| &mut *t))) }
+        }
+        None => None
+      }
+    }
+  }
+
+  #[inline]
+  fn size_hint(&self) -> (uint, Option<uint>) {
+    self.iter.size_hint()
+  }
+}

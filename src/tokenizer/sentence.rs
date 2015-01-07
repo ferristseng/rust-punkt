@@ -1,6 +1,6 @@
 use std::default::Default;
 
-use util::annotate_first_pass;
+use util;
 use trainer::TrainingData;
 use token::prelude::WordTokenWithFlagsOps;
 use tokenizer::{WordTokenizer, WordTokenizerParameters};
@@ -43,7 +43,7 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
           // Get word tokens in the slice. If any of them has a sentence break,
           // then set the flag `has_sentence_break`.
           for mut t in WordTokenizer::new(slice) {
-            annotate_first_pass(&mut t, self.data, self.iter.params.sent_end);
+            util::annotate_first_pass(&mut t, self.data, self.iter.params.sent_end);
 
             if t.is_sentence_break() { has_sentence_break = true }
           }

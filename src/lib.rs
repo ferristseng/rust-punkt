@@ -33,5 +33,4 @@ pub mod tokenizer;
 pub mod trainer;
 
 mod util;
-mod iter;
 mod ortho;
