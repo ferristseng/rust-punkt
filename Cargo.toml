@@ -7,6 +7,6 @@ authors = ["Ferris Tseng <ferristseng@fastmail.fm>"]
 log = "0.1.7"
 phf = "0.4.6"
 phf_mac = "0.4.6"
-xxhash = "0.0.4"
+xxhash = "0.0.5"
 rust-freqdist = "0.0.1"
 rustc-serialize = "0.2.2"

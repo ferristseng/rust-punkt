@@ -67,7 +67,7 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
   fn next(&mut self) -> Option<(&'a str, uint, uint, uint)> {
     let mut astart = self.pos;
     let mut nstart = self.pos;
-    let mut state: u8 = STATE_UPDT_STT;
+    let mut state: u8 = 0;
 
     while self.pos < self.doc.len() {
       let cur = self.doc.char_at(self.pos);
@@ -99,6 +99,13 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
         c if self.params.sent_end.contains(&c) => 
         {
           state |= STATE_SENT_END;
+
+          // If an update is needed on the starting position of the entire token
+          // update it, and toggle the flag back.
+          if state & STATE_UPDT_STT != 0 {
+            astart = self.pos;
+            state ^= STATE_UPDT_STT;
+          }
 
           // Capturing a token, and a sentence ending token is encountered. 
           // This token needs to be revisited, so set retpos to this position.
@@ -132,7 +139,21 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
             self.pos += c.len_utf8();
             nstart = self.pos;
 
-            return_token!()
+            let mut tmp_pos = self.pos;
+
+            while tmp_pos < self.doc.len() {
+              let cur0 = self.doc.char_at(tmp_pos);
+
+              match cur0 {
+                c if c.is_whitespace() => return_token!(),
+                c if self.params.sent_end.contains(&c) => break,
+                _ => ()
+              }
+
+              tmp_pos += cur0.len_utf8();
+            }
+
+            self.pos = tmp_pos;
           } else if !self.params.sent_end.contains(&c) { 
             state ^= STATE_SENT_END;
           }
@@ -181,7 +202,16 @@ fn periodctxt_tokenizer_compare_nltk() {
       let tokr = PeriodContextTokenizer::new(rawf.as_slice());
 
       for ((t, _, _, _), e) in tokr.zip(exps) {
-        assert!(true);
+        let n = t.replace("\n", r"\n").replace("\r", "");
+
+        println!("{}", n);
+
+        assert!(
+          n == e, 
+          "{} - you: [{}] != exp: [{}]",
+          path.filename_str().unwrap(),
+          n,
+          e);
       }
     }
   }
