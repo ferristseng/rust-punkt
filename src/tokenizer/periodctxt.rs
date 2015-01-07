@@ -146,7 +146,13 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
 
               match cur0 {
                 c if c.is_whitespace() => return_token!(),
-                c if self.params.sent_end.contains(&c) => break,
+                c if self.params.sent_end.contains(&c) => {
+                  let nxt = self.doc.char_at(tmp_pos + cur0.len_utf8());
+
+                  if nxt.is_whitespace() || self.params.non_word.contains(&nxt) {
+                    break;
+                  }
+                }
                 _ => ()
               }
 
