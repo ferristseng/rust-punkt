@@ -1,6 +1,5 @@
-#![feature(macro_rules, phase, default_type_params, associated_types)]
-
-#![allow(dead_code)]
+#![allow(dead_code, unstable)]
+#![feature(plugin)]
 
 /// # Overview
 ///
@@ -18,15 +17,16 @@
 /// Training parameters can be specified using `PunktTrainerParameters`. The defaults 
 /// are from NLTK, but customized threshold values and flags can be set.
 
+#[cfg(test)] extern crate test;
+
 extern crate xxhash;
 extern crate phf;
-#[phase(plugin)] extern crate phf_mac;
+#[plugin] #[no_link] extern crate phf_mac;
 
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate freqdist;
 extern crate collections;
-#[cfg(test)] extern crate test;
-#[phase(plugin, link)] extern crate log;
+#[plugin] extern crate log;
 
 pub mod token;
 pub mod tokenizer;

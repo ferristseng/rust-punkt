@@ -32,7 +32,7 @@ impl Default for &'static WordTokenizerParameters {
 }
 
 pub struct WordTokenizer<'a> {
-  pos: uint,
+  pos: usize,
   doc: &'a str,
   pub params: &'a WordTokenizerParameters
 }
@@ -199,7 +199,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     (self.doc.len() / 5, Some(self.doc.len() / 3))
   }
 }
@@ -207,7 +207,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
 /// Checks if the a slice of the document starting at pos 
 /// is a multi char (ex. "...", ". . .", "--").
 /// These are all one-width chars, so iterating by 1 is OK.
-fn is_multi_char(doc: &str, start: uint) -> Option<&str> {
+fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
   let mut end = start;
   let mut prv = doc.as_bytes()[end];
 

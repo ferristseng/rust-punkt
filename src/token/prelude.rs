@@ -1,8 +1,6 @@
 #[cfg(test)] use token::sword::SentenceWordToken;
 #[cfg(test)] use token::training::TrainingToken;
 
-use std::ops::Slice;
-
 // Flags that can be set. These describe certain properties about the Token.
 // These 6 flags only use the lower 8 bits.
 const HAS_FINAL_PERIOD  : u16 = 0b0000000000000001;
@@ -49,19 +47,22 @@ pub trait WordToken {
   fn token(&self) -> &str;
 
   #[inline]
-  fn len(&self) -> uint {
+  fn len(&self) -> usize {
     self.token().len()
   }
 }
 
-impl<F, T: WordTokenWithPeriod + WordTokenWithFlagsOps<F>> WordToken 
-for T {
+impl<F, T> WordToken for T
+  where T: WordTokenWithPeriod + 
+           WordTokenWithFlags<Flags = F> + 
+           WordTokenWithFlagsOps<F>
+{
   #[inline]
   fn token(&self) -> &str {
     if self.has_final_period() {
       self.token_with_period()
     } else {
-      self.token_with_period().slice_to_or_fail(&(self.token_with_period().len() - 1))
+      self.token_with_period().slice_to(self.token_with_period().len() - 1)
     }
   }
 }
@@ -70,8 +71,11 @@ pub trait WordTokenWithoutPeriod {
   fn token_without_period(&self) -> &str;
 }
 
-impl<F, T: WordToken + WordTokenWithFlagsOps<F>> WordTokenWithoutPeriod
-for T {
+impl<F, T> WordTokenWithoutPeriod for T 
+  where T: WordToken + 
+           WordTokenWithFlags<Flags = F> + 
+           WordTokenWithFlagsOps<F>
+{
   #[inline]
   fn token_without_period(&self) -> &str {
     if self.has_final_period() {
@@ -91,14 +95,13 @@ pub trait WordTypeToken: WordToken {
   fn typ_without_break_or_period(&self) -> &str;
 }
 
-impl<
-  F, 
-  T: WordTypeToken + 
-     WordTokenWithPeriod + 
-     WordTokenWithFlagsOpsExt<F> + 
-     WordTokenWithFlagsOps<F>
-> WordTypeToken 
-for T {
+impl<F, T> WordTypeToken for T
+  where T: WordTypeToken + 
+           WordTokenWithPeriod + 
+           WordTokenWithFlags<Flags = F> + 
+           WordTokenWithFlagsOpsExt<F> + 
+           WordTokenWithFlagsOps<F> 
+{
   #[inline]
   fn typ(&self) -> &str {
     if self.is_numeric() { "##number##" } else { self.token() }
@@ -157,7 +160,9 @@ pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
 
 /// Default implementation for a WordToken with flags, where the flags are 
 /// a single byte.
-impl<T: WordTokenWithFlags<Flags = u8>> WordTokenWithFlagsOps<u8> for T {
+impl<T> WordTokenWithFlagsOps<u8> for T 
+  where T: WordTokenWithFlags<Flags = u8>
+{
   #[inline]
   fn is_ellipsis(&self) -> bool {
     *self.flags() & IS_ELLIPSIS as u8 != 0
@@ -244,7 +249,9 @@ impl<T: WordTokenWithFlags<Flags = u8>> WordTokenWithFlagsOps<u8> for T {
 }
 
 /// Default implementation for a WordToken with flags, where the flags are u16.
-impl<T: WordTokenWithFlags<Flags = u16>> WordTokenWithFlagsOps<u16> for T {
+impl<T> WordTokenWithFlagsOps<u16> for T 
+  where T: WordTokenWithFlags<Flags = u16>
+{
   #[inline]
   fn is_ellipsis(&self) -> bool {
     *self.flags() & IS_ELLIPSIS != 0
@@ -360,7 +367,9 @@ pub trait WordTokenWithFlagsOpsExt<T>: WordTokenWithFlags<Flags = T> {
 }
 
 /// Default implementation for a WordToken with flags, where the flags are u16.
-impl<T: WordTokenWithFlags<Flags = u16>> WordTokenWithFlagsOpsExt<u16> for T {
+impl<T> WordTokenWithFlagsOpsExt<u16> for T 
+  where T: WordTokenWithFlags<Flags = u16>
+{
   #[inline]
   fn is_uppercase(&self) -> bool {
     *self.flags() & IS_UPPERCASE != 0

@@ -117,7 +117,7 @@ impl BorrowFrom<Rc<TrainingToken>> for str {
 #[inline]
 fn is_str_numeric(tok: &str) -> bool {
   let mut digit_found = false;
-  let mut pos = 0u;
+  let mut pos = 0us;
 
   for c in tok.chars() {
     match c {

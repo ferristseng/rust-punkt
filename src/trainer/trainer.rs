@@ -1,12 +1,8 @@
 use std::rc::Rc;
-use std::cmp::min;
-use std::num::Float;
 use std::ops::Deref;
-use std::hash::Hash;
 use std::default::Default;
 
 use phf::Set;
-use xxhash::XXState;
 use freqdist::{Distribution, FrequencyDistribution};
 
 use token::TrainingToken;
@@ -22,12 +18,7 @@ use trainer::iter;
 use trainer::col::Collocation;
 use trainer::data::TrainingData;
 use tokenizer::WordTokenizer;
-use ortho::{
-  OrthographyPosition, 
-  OrthographicContext,
-  BEG_UC, 
-  MID_UC, 
-  ORTHO_MAP};
+use ortho::{BEG_UC, MID_UC};
 
 /// Punctuation within sentence that could indicate an abbreviation
 /// if preceded by a period.
@@ -100,10 +91,10 @@ impl Default for &'static TrainerParameters {
 /// ```
 pub struct Trainer<'a> {
   /// Number of periods counted in tokens encountered.
-  pub period_token_count: uint,
+  pub period_token_count: usize,
 
   /// Number of sentence breaks in tokens encountered.
-  pub sentence_break_count: uint,
+  pub sentence_break_count: usize,
 
   /// The training data. This data object is modified as new tokens 
   /// are trained on.
@@ -114,7 +105,7 @@ pub struct Trainer<'a> {
 
   /// A list of all tokens encountered. Other fields reference Tokens
   /// from here.
-  pub tokens: Vec<Rc<TrainingToken>>,
+  tokens: Vec<Rc<TrainingToken>>,
 
   /// A frequency distribution of all Tokens encountered.
   pub type_fdist: FrequencyDistribution<Rc<TrainingToken>>,

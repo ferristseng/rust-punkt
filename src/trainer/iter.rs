@@ -13,60 +13,62 @@ use token::prelude::{WordTypeToken, WordTokenWithFlagsOps, WordTokenWithFlagsOps
 use ortho::{
   OrthographyPosition, 
   OrthographicContext,
-  BEG_UC, 
-  MID_UC, 
   ORTHO_MAP};
 
 #[inline]
-pub fn reclassify_iter<'a, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>>(
+pub fn reclassify_iter<'a, 'b, I>(
   trainer: &'b Trainer<'b>,
   iter: I
-) -> PunktReclassifyIterator<'a, 'b, I> {
+) -> PunktReclassifyIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Rc<TrainingToken>> 
+{
   PunktReclassifyIterator { iter: iter, trainer: trainer }
 }
 
 #[inline]
-pub fn orthography_iter<'a, I: Iterator<Item = &'a Rc<TrainingToken>>>(
+pub fn orthography_iter<'a, I>(
   iter: I
-) -> TokenWithContextIterator<'a, I> {
+) -> TokenWithContextIterator<'a, I> 
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
+{
   TokenWithContextIterator { iter: iter, ctxt: OrthographyPosition::Internal }
 }
 
 #[inline]
-pub fn potential_sentence_starter_iter<
-  'a, 
-  'b, 
-  I: Iterator<Item = &'a Rc<TrainingToken>>>
-(
+pub fn potential_sentence_starter_iter<'a, 'b, I>(
   trainer: &'b Trainer,
   iter: I
-) -> PotentialSentenceStartersIterator<'a, 'b, I> {
+) -> PotentialSentenceStartersIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
+{
   PotentialSentenceStartersIterator { iter: iter, trainer: trainer }
 }
 
 #[inline]
-pub fn potential_collocation_iter<
-  'a, 
-  'b, 
-  I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>>
-(
+pub fn potential_collocation_iter<'a, 'b, I>(
   trainer: &'b Trainer,
   iter: I
-) -> PotentialCollocationsIterator<'a, 'b, I> {
+) -> PotentialCollocationsIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>
+{
   PotentialCollocationsIterator { iter: iter, trainer: trainer }
 }
 
 #[inline]
-pub fn consecutive_token_iter_mut<'a, T, I: Iterator<Item = &'a mut T>>(
+pub fn consecutive_token_iter_mut<'a, T, I>(
   iter: I
-) -> ConsecutiveTokenMutIterator<'a, T, I> {
+) -> ConsecutiveTokenMutIterator<'a, T, I> 
+  where I: Iterator<Item = &'a mut T>
+{
   ConsecutiveTokenMutIterator { iter: iter, last: None }
 }
 
 #[inline]
-pub fn consecutive_token_iter<'a, T, I: Iterator<Item = &'a T>>(
+pub fn consecutive_token_iter<'a, T, I>(
   iter: I
-) -> ConsecutiveTokenIterator<'a, T, I> {
+) -> ConsecutiveTokenIterator<'a, T, I>
+  where I: Iterator<Item = &'a T> 
+{
   ConsecutiveTokenIterator { iter: iter, last: None }
 }
 
@@ -76,13 +78,16 @@ type ScoredToken<'a> = (&'a TrainingToken, f64);
 /// Iterates over every token from the supplied iterator. Only returns 
 /// the ones that are 'not obviously' abbreviations. Also returns the associated 
 /// score of that token.
-struct PunktReclassifyIterator<'a: 'b, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>> {
+struct PunktReclassifyIterator<'a: 'b, 'b, I>
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
+{
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>> Iterator 
-for PunktReclassifyIterator<'a, 'b, I> {
+impl<'a, 'b, I> Iterator for PunktReclassifyIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
+{
   type Item = ScoredToken<'a>;
 
   #[inline]
@@ -149,7 +154,7 @@ for PunktReclassifyIterator<'a, 'b, I> {
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
 }
@@ -159,13 +164,15 @@ type TokenWithContext<'a> = (&'a TrainingToken, OrthographicContext);
 
 /// Iterates over every token from the supplied iterator and returns its
 /// decided orthography within the given text. 
-struct TokenWithContextIterator<'a, I: Iterator<Item = &'a Rc<TrainingToken>>> {
+struct TokenWithContextIterator<'a, I> 
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
+{
   iter: I,
   ctxt: OrthographyPosition
 }
 
-impl<'a, I: Iterator<Item = &'a Rc<TrainingToken>>> Iterator 
-for TokenWithContextIterator<'a, I>
+impl<'a, I> Iterator for TokenWithContextIterator<'a, I>
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
 {
   type Item = TokenWithContext<'a>;
 
@@ -208,24 +215,23 @@ for TokenWithContextIterator<'a, I>
   }
   
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
 }
 
 /// Iterates over every potential Collocation (determined by log likelihood).
 /// Also returns the likelihood of the potential collocation.
-struct PotentialCollocationsIterator<
-  'a, 
-  'b, 
-  I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>> 
+struct PotentialCollocationsIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>> Iterator
-for PotentialCollocationsIterator<'a, 'b, I> {
+impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>
+{
   type Item = (&'a Collocation<Rc<TrainingToken>>, f64);
 
   #[inline]
@@ -273,22 +279,21 @@ for PotentialCollocationsIterator<'a, 'b, I> {
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
 }
 
-struct PotentialSentenceStartersIterator<
-  'a, 
-  'b, 
-  I: Iterator<Item = &'a Rc<TrainingToken>>>
+struct PotentialSentenceStartersIterator<'a, 'b, I>
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I: Iterator<Item = &'a Rc<TrainingToken>>> Iterator
-for PotentialSentenceStartersIterator<'a, 'b, I> {
+impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'a, 'b, I> 
+  where I: Iterator<Item = &'a Rc<TrainingToken>>
+{
   type Item = ScoredToken<'a>;
 
   #[inline]
@@ -324,7 +329,7 @@ for PotentialSentenceStartersIterator<'a, 'b, I> {
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
 }
@@ -332,13 +337,15 @@ for PotentialSentenceStartersIterator<'a, 'b, I> {
 /// Iterates over every PuntkToken from the supplied iterator and returns 
 /// the immediate following token. Returns None for the following token on the 
 /// last token.
-struct ConsecutiveTokenIterator<'a, T: 'a, I: Iterator<Item = &'a T>> {
+struct ConsecutiveTokenIterator<'a, T: 'a, I> 
+  where I: Iterator<Item = &'a T>
+{
   iter: I,
   last: Option<&'a T>
 }
 
-impl<'a, T: 'a, I: Iterator<Item = &'a T>> Iterator
-for ConsecutiveTokenIterator<'a, T, I>
+impl<'a, T: 'a, I> Iterator for ConsecutiveTokenIterator<'a, T, I>
+  where I: Iterator<Item = &'a T>
 {
   type Item = (&'a T, Option<&'a T>); 
 
@@ -362,7 +369,7 @@ for ConsecutiveTokenIterator<'a, T, I>
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
 }
@@ -370,13 +377,15 @@ for ConsecutiveTokenIterator<'a, T, I>
 /// Iterates over every Token from the supplied iterator, and returns the 
 /// immediate following token. Returns None for the following token on the last 
 /// token.
-struct ConsecutiveTokenMutIterator<'a, T: 'a, I: Iterator<Item = &'a mut T>> {
+struct ConsecutiveTokenMutIterator<'a, T: 'a, I>
+  where I: Iterator<Item = &'a mut T> 
+{
   iter: I,
   last: Option<*mut T>
 }
 
-impl<'a, T: 'a, I: Iterator<Item = &'a mut T>> Iterator
-for ConsecutiveTokenMutIterator<'a, T, I>
+impl<'a, T: 'a, I> Iterator for ConsecutiveTokenMutIterator<'a, T, I>
+  where I: Iterator<Item = &'a mut T>
 {
   type Item = (&'a mut T, Option<&'a mut T>);
 
@@ -400,7 +409,7 @@ for ConsecutiveTokenMutIterator<'a, T, I>
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
 }

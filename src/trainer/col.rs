@@ -3,7 +3,7 @@ use std::hash::Hash;
 
 use xxhash::XXState;
 
-use token::prelude::{WordToken, WordTypeToken};
+use token::prelude::WordTypeToken;
 
 /// A collocation. A normal Tuple can not be used, because a collocation
 /// as defined by NLTK requires a special hash function. 
@@ -30,9 +30,13 @@ impl<T> Collocation<T> {
   }
 }
 
-impl<T: WordTypeToken, D: Deref<Target = T>> Eq for Collocation<D> { }
+impl<T, D> Eq for Collocation<D> 
+  where T: WordTypeToken, D: Deref<Target = T> 
+{ }
 
-impl<T: WordTypeToken, D: Deref<Target = T>> Hash<XXState> for Collocation<D> {
+impl<T, D> Hash<XXState> for Collocation<D>
+  where T: WordTypeToken, D: Deref<Target = T> 
+{
   #[inline]
   fn hash(&self, state: &mut XXState) {
     (*self.l).typ_without_period().hash(state); 
@@ -40,7 +44,9 @@ impl<T: WordTypeToken, D: Deref<Target = T>> Hash<XXState> for Collocation<D> {
   }
 }
 
-impl<T: WordTypeToken, D: Deref<Target = T>> PartialEq for Collocation<D> {
+impl<T, D> PartialEq for Collocation<D> 
+  where T: WordTypeToken, D: Deref<Target = T> 
+{
   #[inline]
   fn eq(&self, x: &Collocation<D>) -> bool {
     (*self.l).typ_without_period() == (*x.l).typ_without_period() &&

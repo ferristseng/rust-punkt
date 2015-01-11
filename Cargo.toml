@@ -1,12 +1,12 @@
 [package]
 name = "punkt"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Ferris Tseng <ferristseng@fastmail.fm>"]
 
 [dependencies]
-log = "0.1.7"
-phf = "0.4.6"
-phf_mac = "0.4.6"
-xxhash = "0.0.5"
+log = "0.1.9"
+phf = "0.4.9"
+phf_mac = "0.4.9"
+xxhash = "0.0.6"
 rust-freqdist = "0.0.1"
-rustc-serialize = "0.2.2"
+rustc-serialize = "0.2.7"

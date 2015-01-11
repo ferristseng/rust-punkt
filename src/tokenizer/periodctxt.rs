@@ -26,7 +26,7 @@ impl Default for &'static PeriodContextTokenizerParameters {
 
 pub struct PeriodContextTokenizer<'a> {
   doc: &'a str,
-  pos: uint,
+  pos: usize,
   pub params: &'a PeriodContextTokenizerParameters
 }
 
@@ -55,7 +55,7 @@ impl<'a> PeriodContextTokenizer<'a> {
   /// Performs a lookahead to see if a sentence ending character is actually
   /// the end of the token. If it is the end, `None` is returned. Otherwise,
   /// return `Some(x)` where `x` is the new position to iterate to.
-  fn lookahead_is_token(&self) -> Option<uint> {
+  fn lookahead_is_token(&self) -> Option<usize> {
     let mut pos = self.pos;
 
     while pos < self.doc.len() {
@@ -94,9 +94,9 @@ const STATE_UPDT_RET: u8 = 0b01000000; // Update the position at end flag.
 impl<'a> Iterator for PeriodContextTokenizer<'a> {
   // (Entire slice of section, beginning of next break (if there is one),
   // start of whitespace before next token, end of entire slice)
-  type Item = (&'a str, uint, uint, uint);
+  type Item = (&'a str, usize, usize, usize);
 
-  fn next(&mut self) -> Option<(&'a str, uint, uint, uint)> {
+  fn next(&mut self) -> Option<(&'a str, usize, usize, usize)> {
     let mut astart = self.pos;
     let mut wstart = self.pos;
     let mut nstart = self.pos;
@@ -209,7 +209,7 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     (self.doc.len() / 5, Some(self.doc.len() / 3))
   }
 }

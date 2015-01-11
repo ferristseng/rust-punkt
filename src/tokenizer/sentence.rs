@@ -11,7 +11,7 @@ pub struct SentenceTokenizer<'a> {
   iter: PeriodContextTokenizer<'a>,
   data: &'a TrainingData,
   algn: bool, 
-  last: uint,
+  last: usize,
   pub params: &'a WordTokenizerParameters
 }
 
@@ -72,7 +72,7 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
   }
 
   #[inline]
-  fn size_hint(&self) -> (uint, Option<uint>) {
+  fn size_hint(&self) -> (usize, Option<usize>) {
     (self.doc.len() / 10, None)
   }
 }
