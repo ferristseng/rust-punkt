@@ -71,9 +71,7 @@ impl TrainingData {
 
   /// Returns the inner representation of compiled collocations types.
   #[inline]
-  fn collocations(
-    &self
-  ) -> &HashMap<String, HashSet<String, XXState>, XXState> {
+  fn collocations(&self) -> &HashMap<String, HashSet<String, XXState>, XXState> {
     &self.collocations
   }
 
@@ -86,9 +84,7 @@ impl TrainingData {
   /// Returns the inner representation of compiled orthographic contexts for 
   /// corresponding keys (tokens).
   #[inline]
-  fn orthographic_context(
-    &self
-  ) -> &HashMap<String, OrthographicContext, XXState> {
+  fn orthographic_context(&self) -> &HashMap<String, OrthographicContext, XXState> {
     &self.orthographic_context
   }
 
