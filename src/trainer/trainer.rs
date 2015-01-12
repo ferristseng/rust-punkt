@@ -309,7 +309,7 @@ fn is_rare_abbrev_type(
       *trainer.type_fdist.get(key.slice_to(key.len() - 1)).unwrap_or(&0);
 
     if trainer.data.contains_abbrev(tok0.typ()) || 
-      (count as f64) >= trainer.params.abbrev_upper_bound 
+       (count as f64) >= trainer.params.abbrev_upper_bound 
     {
       // Check the second condition. Return if it's true...the token is 
       // already an abbreviation!
@@ -353,9 +353,9 @@ fn is_potential_collocation(
 ) -> bool {
   (trainer.params.include_all_collocations ||
   (trainer.params.include_abbrev_collocations && tok0.is_abbrev()) ||
-  (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())))
-  && tok0.is_non_punct()
-  && tok1.is_non_punct()
+  (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial()))) &&
+  tok0.is_non_punct() && 
+  tok1.is_non_punct()
 }
 
 #[inline]
@@ -574,7 +574,7 @@ impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I>
       match self.iter.next() {
         Some(col) => {
           if self.trainer.data.contains_sentence_starter(
-            col.right().typ_without_break_or_period()) 
+             col.right().typ_without_break_or_period()) 
           {
             continue;    
           }
@@ -589,9 +589,9 @@ impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I>
             *self.trainer.type_fdist.get(col.right().typ_with_period()).unwrap_or(&0);
 
           if left_count > 1 && 
-            right_count > 1 &&
-            self.trainer.params.collocation_frequency_lower_bound < count as f64 &&
-            count <= min(left_count, right_count)
+             right_count > 1 &&
+             self.trainer.params.collocation_frequency_lower_bound < count as f64 &&
+             count <= min(left_count, right_count)
           {
             let likelihood = math::col_log_likelihood(
               left_count as f64,
@@ -600,8 +600,8 @@ impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I>
               self.trainer.type_fdist.sum_counts() as f64);
 
             if likelihood >= self.trainer.params.collocation_lower_bound &&
-              (self.trainer.type_fdist.sum_counts() as f64 / left_count as f64) >
-              (right_count as f64 / count as f64)
+               (self.trainer.type_fdist.sum_counts() as f64 / left_count as f64) >
+               (right_count as f64 / count as f64)
             {
               return Some((col, likelihood))
             }
@@ -650,9 +650,9 @@ impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'a, 'b, I>
             self.trainer.type_fdist.sum_counts() as f64);
 
           if likelihood >= self.trainer.params.sentence_starter_lower_bound &&
-            (self.trainer.type_fdist.sum_counts() as f64 / 
-            self.trainer.sentence_break_count as f64) > 
-            (typ_count as f64 / ss_count as f64)
+             (self.trainer.type_fdist.sum_counts() as f64 / 
+             self.trainer.sentence_break_count as f64) > 
+             (typ_count as f64 / ss_count as f64)
           {
             return Some((tok.deref(), likelihood));
           }

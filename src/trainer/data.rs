@@ -125,6 +125,7 @@ impl TrainingData {
   }
 
   /// Insert an abbreviation if it doesn't already exist.
+  #[inline]
   pub fn insert_abbrev(&mut self, abbrev: &str) -> bool {
     if !self.abbrev_types().contains(abbrev) {
       self.mut_abbrev_types().insert(abbrev.to_string())
@@ -134,6 +135,7 @@ impl TrainingData {
   }
 
   /// Insert a collocation if it doesn't already exist.
+  #[inline]
   pub fn insert_collocation(&mut self, tok0: &str, tok1: &str) -> bool {
     if !self.collocations().contains_key(tok0) {
       self.mut_collocations().insert(
@@ -145,6 +147,7 @@ impl TrainingData {
   }
 
   /// Insert a sentence starter if it doesn't already exist.
+  #[inline]
   pub fn insert_sentence_starter(&mut self, tok: &str) -> bool {
     if !self.sentence_starters().contains(tok) {
       self.mut_sentence_starters().insert(tok.to_string())
@@ -154,6 +157,7 @@ impl TrainingData {
   }
 
   /// Insert a token and its orthographic context  if it doesn't already exist.
+  #[inline]
   pub fn insert_orthographic_context(
     &mut self, 
     tok: &str, 
