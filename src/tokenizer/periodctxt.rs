@@ -33,11 +33,7 @@ pub struct PeriodContextTokenizer<'a> {
 impl<'a> PeriodContextTokenizer<'a> {
   #[inline]
   pub fn new(doc: &'a str) -> PeriodContextTokenizer<'a> {
-    PeriodContextTokenizer {
-      doc: doc, 
-      pos: 0,
-      params: Default::default()
-    }
+    PeriodContextTokenizer::with_parameters(doc, Default::default())
   }
 
   #[inline]

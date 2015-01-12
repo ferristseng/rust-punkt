@@ -1,4 +1,4 @@
-#![allow(dead_code, unstable)]
+#![allow(unstable)]
 #![feature(plugin)]
 
 /// # Overview

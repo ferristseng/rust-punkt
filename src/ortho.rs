@@ -26,8 +26,6 @@ pub const UNK_UC: OrthographicContext = 0b00001000;
 pub const BEG_LC: OrthographicContext = 0b00010000;
 pub const MID_LC: OrthographicContext = 0b00100000;
 pub const UNK_LC: OrthographicContext = 0b01000000;
-pub const ORT_UC: OrthographicContext = BEG_UC | MID_UC | UNK_UC; 
-pub const ORT_LC: OrthographicContext = BEG_LC | MID_LC | UNK_LC;
 
 /// Map mapping a combination of LetterCase and OrthographyPosition 
 /// to an OrthographicConstant describing orthographic attributes about the 
@@ -37,7 +35,7 @@ pub static ORTHO_MAP: Map<u8, OrthographicContext> = phf_map! {
   b'B' => BEG_UC, // 66
   b'"' => MID_UC, // 34
   b'b' => UNK_UC, // 98
-  b'A' => BEG_UC, // 65
-  b'!' => MID_UC, // 33
-  b'a' => UNK_UC  // 97
+  b'A' => BEG_LC, // 65
+  b'!' => MID_LC, // 33
+  b'a' => UNK_LC  // 97
 };

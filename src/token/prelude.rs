@@ -16,8 +16,7 @@ const IS_NUMERIC        : u16 = 0b0100000000000000;
 const IS_NON_PUNCT      : u16 = 0b0010000000000000;
 const IS_UPPERCASE      : u16 = 0b0001000000000000;
 const IS_LOWERCASE      : u16 = 0b0000100000000000;
-const IS_ALPHABETIC     : u16 = 0b0000001000000000;
-const HAS_PUNCT         : u16 = 0b0000010000000000;
+const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 
 /// Possible cases a letter can be in. OR (|) can be applied to these with 
 /// a OrthographyPosition to get a corrosponding OrthographicContext from 
@@ -469,6 +468,8 @@ macro_rules! perform_flag_test(
 #[test]
 fn test_training_token_flags() {
   let mut tok = TrainingToken::new("test", false, false, false);
+
+  tok.set_is_lowercase(false);
   
   assert_eq!(*tok.flags(), 0);
 

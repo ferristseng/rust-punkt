@@ -30,6 +30,8 @@ impl TrainingToken {
   ) -> TrainingToken {
     debug_assert!(slice.len() > 0);
 
+    let first = slice.char_at(0);
+
     // Add a period to any tokens without a period. This is an optimization 
     // to avoid creating an entirely new token when searching through the HashSet.
     let mut tok = if slice.as_bytes()[slice.len() - 1] == b'.' {
@@ -62,6 +64,13 @@ impl TrainingToken {
     
     if !tok.has_final_period() {
       tok.inner.push('.');
+    }
+
+    // Check if the first character is uppercase or lowercase.
+    if first.is_uppercase() {
+      tok.set_is_uppercase(true);
+    } else if first.is_lowercase() {
+      tok.set_is_lowercase(true);
     }
 
     tok.set_is_ellipsis(is_ellipsis);

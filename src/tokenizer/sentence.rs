@@ -16,7 +16,7 @@ pub struct SentenceTokenizer<'a> {
 }
 
 impl<'a> SentenceTokenizer<'a> {
-  fn new(
+  pub fn new(
     doc: &'a str, 
     data: &'a TrainingData
   ) -> SentenceTokenizer<'a> {
@@ -42,7 +42,7 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
 
           // Get word tokens in the slice. If any of them has a sentence break,
           // then set the flag `has_sentence_break`.
-          for mut t in WordTokenizer::new(slice) {
+          for mut t in WordTokenizer::with_parameters(slice, self.params) {
             util::annotate_first_pass(&mut t, self.data, self.iter.params.sent_end);
 
             if t.is_sentence_break() { has_sentence_break = true }
@@ -90,5 +90,5 @@ fn test_sentence_tokenizer() {
     println!("[{}]", s.escape_default());
   }
 
-  assert!(false);
+  assert!(true);
 }
