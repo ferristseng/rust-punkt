@@ -1,7 +1,7 @@
 use std::ops::Deref;
 use std::hash::Hash;
 
-use xxhash::XXState;
+use xxhash::XXHasher;
 
 use token::prelude::WordTypeToken;
 
@@ -34,11 +34,11 @@ impl<T, D> Eq for Collocation<D>
   where T: WordTypeToken, D: Deref<Target = T> 
 { }
 
-impl<T, D> Hash<XXState> for Collocation<D>
+impl<T, D> Hash<XXHasher> for Collocation<D>
   where T: WordTypeToken, D: Deref<Target = T> 
 {
   #[inline]
-  fn hash(&self, state: &mut XXState) {
+  fn hash(&self, state: &mut XXHasher) {
     (*self.l).typ_without_period().hash(state); 
     (*self.r).typ_without_break_or_period().hash(state);
   }

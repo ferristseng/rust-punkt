@@ -3,7 +3,7 @@ use std::hash::Hash;
 use std::borrow::BorrowFrom;
 use std::fmt::{Show, Formatter, Result};
 
-use xxhash::XXState;
+use xxhash::XXHasher;
 
 use token::prelude::{
   WordTokenWithPeriod, 
@@ -103,9 +103,9 @@ impl PartialEq for TrainingToken {
   }
 }
 
-impl Hash<XXState> for TrainingToken {
+impl Hash<XXHasher> for TrainingToken {
   #[inline]
-  fn hash(&self, state: &mut XXState) {
+  fn hash(&self, state: &mut XXHasher) {
     self.typ().hash(state)
   }
 }

@@ -2,7 +2,7 @@ use std::hash::Hash;
 use std::borrow::BorrowFrom;
 use std::fmt::{Show, Formatter, Result};
 
-use xxhash::XXState;
+use xxhash::XXHasher;
 
 use token::prelude::{
   WordToken,
@@ -93,9 +93,9 @@ impl<'a> PartialEq for SentenceWordToken<'a> {
   }
 }
 
-impl<'a> Hash<XXState> for SentenceWordToken<'a> {
+impl<'a> Hash<XXHasher> for SentenceWordToken<'a> {
   #[inline]
-  fn hash(&self, state: &mut XXState) {
+  fn hash(&self, state: &mut XXHasher) {
     self.token().hash(state)
   }
 }

@@ -5,10 +5,11 @@ use std::borrow::BorrowFrom;
 use std::collections::{HashSet, HashMap};
 use std::collections::hash_set::Iter as HashSetIter;
 use std::collections::hash_map::Iter as HashMapIter;
+use std::collections::hash_state::DefaultState;
 
 use ortho::OrthographicContext;
 
-use xxhash::XXState;
+use xxhash::XXHasher;
 use rustc_serialize::json::Json;
 
 /// Represents already compiled data that is used by the PunktTrainer, 
@@ -26,10 +27,13 @@ use rustc_serialize::json::Json;
 /// ``` 
 #[derive(Show)]
 pub struct TrainingData {
-  abbrev_types: HashSet<String, XXState>,
-  collocations: HashMap<String, HashSet<String, XXState>, XXState>,
-  sentence_starters: HashSet<String, XXState>,
-  orthographic_context: HashMap<String, OrthographicContext, XXState>
+  abbrev_types: HashSet<String, DefaultState<XXHasher>>,
+  collocations: HashMap<
+    String, 
+    HashSet<String, DefaultState<XXHasher>>, DefaultState<XXHasher>
+  >,
+  sentence_starters: HashSet<String, DefaultState<XXHasher>>,
+  orthographic_context: HashMap<String, OrthographicContext, DefaultState<XXHasher>>
 }
 
 // Macro for generating functions to load precompiled data.
@@ -65,33 +69,42 @@ preloaded_data!(turkish, "data/turkish.json");
 impl TrainingData {
   /// Returns the inner representation of compiled abbreviation types.
   #[inline]
-  fn abbrev_types(&self) -> &HashSet<String, XXState> {
+  fn abbrev_types(&self) -> &HashSet<String, DefaultState<XXHasher>> {
     &self.abbrev_types
   }
 
   /// Returns the inner representation of compiled collocations types.
   #[inline]
-  fn collocations(&self) -> &HashMap<String, HashSet<String, XXState>, XXState> {
+  fn collocations(
+    &self
+  ) -> &HashMap<
+    String, 
+    HashSet<String, DefaultState<XXHasher>>, DefaultState<XXHasher>
+  > {
     &self.collocations
   }
 
   /// Returns the inner representation of compiled sentence starters.
   #[inline]
-  fn sentence_starters(&self) -> &HashSet<String, XXState> {
+  fn sentence_starters(&self) -> &HashSet<String, DefaultState<XXHasher>> {
     &self.sentence_starters
   }
 
   /// Returns the inner representation of compiled orthographic contexts for 
   /// corresponding keys (tokens).
   #[inline]
-  fn orthographic_context(&self) -> &HashMap<String, OrthographicContext, XXState> {
+  fn orthographic_context(
+    &self
+  ) -> &HashMap<String, OrthographicContext, DefaultState<XXHasher>> {
     &self.orthographic_context
   }
 
   /// Internal - returns a mutable reference to the inner container holding 
   /// abbreviation types.
   #[inline]
-  fn mut_abbrev_types(&mut self) -> &mut HashSet<String, XXState> {
+  fn mut_abbrev_types(
+    &mut self
+  ) -> &mut HashSet<String, DefaultState<XXHasher>> {
     &mut self.abbrev_types
   }
 
@@ -100,14 +113,19 @@ impl TrainingData {
   #[inline]
   fn mut_collocations(
     &mut self
-  ) -> &mut HashMap<String, HashSet<String, XXState>, XXState> {
+  ) -> &mut HashMap<
+    String, 
+    HashSet<String, DefaultState<XXHasher>>, DefaultState<XXHasher>
+  > {
     &mut self.collocations
   }
 
   /// Internal - returns a mutable reference to the inner container holding 
   /// sentence starters.
   #[inline]
-  fn mut_sentence_starters(&mut self) -> &mut HashSet<String, XXState> {
+  fn mut_sentence_starters(
+    &mut self
+  ) -> &mut HashSet<String, DefaultState<XXHasher>> {
     &mut self.sentence_starters
   }
 
@@ -116,7 +134,7 @@ impl TrainingData {
   #[inline]
   fn mut_orthographic_context(
     &mut self
-  ) -> &mut HashMap<String, OrthographicContext, XXState> {
+  ) -> &mut HashMap<String, OrthographicContext, DefaultState<XXHasher>> {
     &mut self.orthographic_context
   }
 
@@ -136,7 +154,7 @@ impl TrainingData {
     if !self.collocations().contains_key(tok0) {
       self.mut_collocations().insert(
         tok0.to_string(), 
-        HashSet::with_hash_state(XXState::new()));
+        HashSet::with_hash_state(Default::default()));
     }
 
     self.mut_collocations().get_mut(tok0).unwrap().insert(tok1.to_string())
@@ -193,7 +211,7 @@ impl TrainingData {
   /// Remove an abbreviation by token key.
   #[inline]
   pub fn remove_abbrev<Q: ?Sized>(&mut self, abbrev: &Q) -> bool 
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.mut_abbrev_types().remove(abbrev)
   }
@@ -201,7 +219,7 @@ impl TrainingData {
   /// Remove a collocation by left and right tokens.
   #[inline]
   pub fn remove_collocation<Q: ?Sized>(&mut self, tok0: &Q, tok1: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.mut_collocations().get_mut(tok0).map(|s| s.remove(tok1)).unwrap_or(false)
   }
@@ -209,7 +227,7 @@ impl TrainingData {
   /// Remove a sentence starter by token key.
   #[inline]
   pub fn remove_sentence_starter<Q: ?Sized>(&mut self, tok: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.mut_sentence_starters().remove(tok)
   }
@@ -217,7 +235,7 @@ impl TrainingData {
   /// Remove a token and its orthographic context by token key.
   #[inline]
   pub fn remove_orthographic_context<Q: ?Sized>(&mut self, tok: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.mut_orthographic_context().remove(tok).is_some()
   }
@@ -226,7 +244,7 @@ impl TrainingData {
   /// tokens.
   #[inline]
   pub fn contains_collocation<Q: ?Sized>(&self, tok0: &Q, tok1: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.collocations().get(tok0).map(|s| s.contains(tok1)).unwrap_or(false)
   }
@@ -234,7 +252,7 @@ impl TrainingData {
   /// Checks whether or not a sentence starter already exists by token key.
   #[inline]
   pub fn contains_sentence_starter<Q: ?Sized>(&self, tok: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.sentence_starters().contains(tok)
   }
@@ -242,7 +260,7 @@ impl TrainingData {
   /// Checks whether or not an abbreviation already exists by token key.
   #[inline]
   pub fn contains_abbrev<Q: ?Sized>(&self, tok: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.abbrev_types().contains(tok)
   }
@@ -251,7 +269,7 @@ impl TrainingData {
   /// contexts.
   #[inline]
   pub fn contains_orthographic_context<Q: ?Sized>(&self, tok: &Q) -> bool
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.orthographic_context().contains_key(tok)
   }
@@ -263,7 +281,7 @@ impl TrainingData {
     &self, 
     tok: &Q
   ) -> Option<&OrthographicContext>
-    where Q: Hash<XXState> + Eq + BorrowFrom<String>
+    where Q: Hash<XXHasher> + Eq + BorrowFrom<String>
   {
     self.orthographic_context().get(tok)
   }
@@ -320,10 +338,10 @@ impl Default for TrainingData {
   /// Returns a default TrainingData object with no data.
   fn default() -> TrainingData {
     TrainingData {
-      abbrev_types: HashSet::with_hash_state(XXState::new()),
-      collocations: HashMap::with_hash_state(XXState::new()),
-      sentence_starters: HashSet::with_hash_state(XXState::new()),
-      orthographic_context: HashMap::with_hash_state(XXState::new())
+      abbrev_types: HashSet::with_hash_state(Default::default()),
+      collocations: HashMap::with_hash_state(Default::default()),
+      sentence_starters: HashSet::with_hash_state(Default::default()),
+      orthographic_context: HashMap::with_hash_state(Default::default())
     }
   }
 }
@@ -365,7 +383,7 @@ impl FromStr for TrainingData {
           match (ar.pop(), ar.pop()) {
             (Some(Json::String(r)), Some(Json::String(l))) => {
               if !data.collocations().contains_key(l.as_slice()) {
-                let mut bucket = HashSet::with_hash_state(XXState::new());
+                let mut bucket = HashSet::with_hash_state(Default::default());
 
                 bucket.insert(r);
 
@@ -401,7 +419,7 @@ impl FromStr for TrainingData {
 /// Iterator for collocations stored in TrainingData. Uses a recursive algorithm to 
 /// generate next items from internal collocation collection in TrainingData.
 pub struct CollocationsIterator<'a> {
-  iter: HashMapIter<'a, String, HashSet<String, XXState>>,
+  iter: HashMapIter<'a, String, HashSet<String, DefaultState<XXHasher>>>,
   cur: Option<(&'a String, HashSetIter<'a String>)>
 }
 
