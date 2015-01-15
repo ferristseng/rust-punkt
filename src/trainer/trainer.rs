@@ -176,7 +176,19 @@ impl<'a> Trainer<'a> {
 
     // Push new tokens that the tokenizer finds from doc into `self.tokens`.
     for mut t in WordTokenizer::with_parameters(doc, self.tparams) { 
+      let mut has_punct = false;
+      let mut is_non_punct = false;
 
+      for c in t.token().chars() {
+        if c.is_alphabetic() || c == '_' {
+          is_non_punct = true;
+        } else if !c.is_digit(10) {
+          has_punct = true;
+        }
+      }
+
+      t.set_is_non_punct(is_non_punct);
+      t.set_is_alphabetic(!has_punct);
 
       self.tokens.push(Rc::new(t));
     }
