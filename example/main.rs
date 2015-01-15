@@ -11,6 +11,7 @@ fn main() {
     let mut trainer = Trainer::new(&mut data);
 
     trainer.train(include_str!("../test/raw/npr-article-01.txt"));
+    trainer.train(include_str!("../test/raw/ny-times-article-01.txt"));
     trainer.finalize();
   }
 
