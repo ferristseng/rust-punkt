@@ -711,13 +711,3 @@ impl<'a, T: 'a, I> Iterator for ConsecutiveTokenIterator<'a, T, I>
     self.iter.size_hint()
   }
 }
-
-#[test]
-fn train_test() {
-  let mut data = Default::default();
-  let mut trainer = Trainer::new(&mut data);
-  trainer.train(include_str!("../../test/raw/npr-article-01.txt"));
-  trainer.finalize();
-  println!("{:?}", trainer.data);
-  assert!(false);
-}

@@ -488,7 +488,9 @@ macro_rules! perform_flag_test(
 fn test_training_token_flags() {
   let mut tok = TrainingToken::new("test", false, false, false);
 
+  tok.set_is_non_punct(false);
   tok.set_is_lowercase(false);
+  tok.set_is_alphabetic(false);
   
   assert_eq!(*tok.flags(), 0);
 
