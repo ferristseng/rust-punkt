@@ -24,6 +24,9 @@ use trainer::data::TrainingData;
 use tokenizer::{WordTokenizer, WordTokenizerParameters};
 use ortho::{BEG_UC, MID_UC, OrthographyPosition, OrthographicContext, ORTHO_MAP};
 
+/// Default parameters for a Trainer. These values are taken mostly from 
+/// NLTK, except `internal_punctuation`, which adds some unicode definitions for 
+/// punctuation that can be contained within sentences.
 static DEFAULTS: TrainerParameters = TrainerParameters {
   sent_end: &phf_set!['.', '!', '?'],
   internal_punctuation: &phf_set![',', ':', ';', '\u{2014}'],
@@ -167,7 +170,7 @@ impl<'a> Trainer<'a> {
     &mut *(&*self.data as *const TrainingData as *mut TrainingData)
   }
 
-  /// Train on a document. Does tokenization using a WordTokenizer.  
+  /// Train on a document. Does tokenization using a WordTokenizer.
   pub fn train(&mut self, doc: &str) {
     // `self.tokens` hold all the tokens that were encountered during 
     // training. In order to get only the ones for the inputted document, 
@@ -176,20 +179,6 @@ impl<'a> Trainer<'a> {
 
     // Push new tokens that the tokenizer finds from doc into `self.tokens`.
     for mut t in WordTokenizer::with_parameters(doc, self.tparams) { 
-      let mut has_punct = false;
-      let mut is_non_punct = false;
-
-      for c in t.token().chars() {
-        if c.is_alphabetic() || c == '_' {
-          is_non_punct = true;
-        } else if !c.is_digit(10) {
-          has_punct = true;
-        }
-      }
-
-      t.set_is_non_punct(is_non_punct);
-      t.set_is_alphabetic(!has_punct);
-
       self.tokens.push(Rc::new(t));
     }
 
@@ -223,9 +212,11 @@ impl<'a> Trainer<'a> {
     }
 
     // Mark abbreviation types if any exist with the first pass annotation function.
+    // Note, this also sets `is_sentence_break` flag.
     for t in slice.iter() {
       // Rc doesn't provide a mutable interface into a Token by default. 
-      // We have to coerce the Token into being mutable.
+      // We have to coerce the Token into being mutable. This is safe, since 
+      // `annotate_first_pass` only modifies the flags. 
       unsafe {
         util::annotate_first_pass(
           &mut *(t.deref() as *const TrainingToken as *mut TrainingToken),
@@ -266,8 +257,9 @@ impl<'a> Trainer<'a> {
     }
   }
 
-  /// Empties the trained data, and compiles it with Data. Afterwards, the 
-  /// trainer can be dropped. 
+  /// Empties the trained data, and compiles it with mutably borrow training data. 
+  /// Afterwards, the trainer should be dropped (suggested), although finalizing 
+  /// could theoretically could occur between each training stage. 
   pub fn finalize(&mut self) {
     self.data.clear_sentence_starters();
 

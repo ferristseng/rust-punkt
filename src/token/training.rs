@@ -22,6 +22,9 @@ pub struct TrainingToken {
 impl_flags!(TrainingToken, u16);
 
 impl TrainingToken {
+  /// Creates a new TrainingToken, from a string slice, and some metadata that 
+  /// can be acquired while parsing. This constructor will properly set some flags 
+  /// on the token. Note, the original string can not be recovered from this token.
   pub fn new(
     slice: &str,
     is_ellipsis: bool,
@@ -31,6 +34,7 @@ impl TrainingToken {
     debug_assert!(slice.len() > 0);
 
     let first = slice.char_at(0);
+    let mut has_punct = false;
 
     // Add a period to any tokens without a period. This is an optimization 
     // to avoid creating an entirely new token when searching through the HashSet.
@@ -58,8 +62,16 @@ impl TrainingToken {
     }
 
     // Builds a normalized version of the slice from the slice.
+    // Also, determine if a sentence has any punctuation, and is not 
+    // entirely punctuation.
     for c in slice.chars() { 
-      tok.inner.push(c.to_lowercase())
+      tok.inner.push(c.to_lowercase());
+
+      if c.is_alphabetic() || c == '_' {
+        tok.set_is_non_punct(true);
+      } else if !c.is_digit(10) {
+        has_punct = true;
+      }
     }
     
     if !tok.has_final_period() {
@@ -73,6 +85,7 @@ impl TrainingToken {
       tok.set_is_lowercase(true);
     }
 
+    tok.set_is_alphabetic(!has_punct);
     tok.set_is_ellipsis(is_ellipsis);
     tok.set_is_paragraph_start(is_paragraph_start);
     tok.set_is_newline_start(is_newline_start);

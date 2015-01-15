@@ -17,6 +17,9 @@ pub struct SentenceWordToken<'a> {
 }
 
 impl<'a> SentenceWordToken<'a> {
+  /// Creates a new sentence word token from a string slice (copies the string).
+  /// This constructor will set the `has_final_period` flag, but nothing else. 
+  /// In most instances, this initialization should be sufficient.
   pub fn new(slice: &'a str) -> SentenceWordToken {
     debug_assert!(slice.len() > 0);
 
@@ -51,6 +54,8 @@ impl<'a> SentenceWordToken<'a> {
     tok
   }
 
+  /// Returns the original string (the one that was used to create)
+  /// this token.
   #[inline]
   pub fn original(&self) -> &str {
     self.slice

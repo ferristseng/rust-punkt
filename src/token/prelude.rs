@@ -38,13 +38,17 @@ impl LetterCase {
   }
 }
 
+/// A word token with a representation of the token WITH a period appended
+/// onto the end.
 pub trait WordTokenWithPeriod {
   fn token_with_period(&self) -> &str;
 }
 
+/// A representable word token. 
 pub trait WordToken {
   fn token(&self) -> &str;
 
+  /// The length of the token.
   #[inline]
   fn len(&self) -> usize {
     self.token().len()
@@ -56,6 +60,8 @@ impl<F, T> WordToken for T
            WordTokenWithFlags<Flags = F> + 
            WordTokenWithFlagsOps<F>
 {
+  /// Returns the original token (which can be reconstructed given the 
+  /// flags on the token are correct).
   #[inline]
   fn token(&self) -> &str {
     if self.has_final_period() {
@@ -66,6 +72,8 @@ impl<F, T> WordToken for T
   }
 }
 
+/// A word token with a representation of the token WITHOUT a period (if 
+/// the original word token contained one).
 pub trait WordTokenWithoutPeriod {
   fn token_without_period(&self) -> &str;
 }
@@ -75,6 +83,8 @@ impl<F, T> WordTokenWithoutPeriod for T
            WordTokenWithFlags<Flags = F> + 
            WordTokenWithFlagsOps<F>
 {
+  /// Returns the token without a period on the end (if it had one), given 
+  /// that the flags on the token are correct.
   #[inline]
   fn token_without_period(&self) -> &str {
     if self.has_final_period() {
@@ -101,16 +111,25 @@ impl<F, T> WordTypeToken for T
            WordTokenWithFlagsOpsExt<F> + 
            WordTokenWithFlagsOps<F> 
 {
+  /// Returns the type of the token. If the token is numeric (determined by flags), 
+  /// returns a string defined by NLTK: `##number##`, otherwise returns the 
+  /// token.
   #[inline]
   fn typ(&self) -> &str {
     if self.is_numeric() { "##number##" } else { self.token() }
   }
 
+  /// Returns the type of the token with a period appended to it. Returns 
+  /// `##number##.` if the token is numeric (determined by flags), otherwise 
+  /// returns the original token with a period appended to it.
   #[inline]
   fn typ_with_period(&self) -> &str {
     if self.is_numeric() { "##number##." } else { self.token_with_period() }
   }
 
+  /// Returns the type of the token without a period appended to it. Will return 
+  /// `.`, if it is the only character in the string; otherwise, will slice type 
+  /// to exclude the final period. 
   #[inline]
   fn typ_without_period(&self) -> &str {
     if self.token().len() > 1 && self.has_final_period() {
