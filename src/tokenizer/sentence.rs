@@ -10,7 +10,6 @@ pub struct SentenceTokenizer<'a> {
   doc: &'a str,
   iter: PeriodContextTokenizer<'a>,
   data: &'a TrainingData,
-  algn: bool, 
   last: usize,
   pub params: &'a WordTokenizerParameters
 }
@@ -24,7 +23,6 @@ impl<'a> SentenceTokenizer<'a> {
       doc: doc,
       iter: PeriodContextTokenizer::new(doc),
       data: data,
-      algn: false,
       last: 0,
       params: Default::default()
     }
