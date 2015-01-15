@@ -15,13 +15,13 @@ The library allows you to train the tokenizer yourself or use pre-trained data.
 
 To use pre-trained data from English texts (other languages available):
 
-```
+```rust
 extern crate punkt;
 
 use punkt::trainer::{TrainingData, Trainer};
 use punkt::tokenizer::SentenceTokenizer;
 
-let doc = ...;
+let doc: &str = ...;
 let data = TrainingData::english();
 
 for sent in SentenceTokenizer::new(doc, &data) {
@@ -34,15 +34,15 @@ necessary information from the document it is tokenizing.
 
 To emulate this behavior:
 
-```
+```rust
 extern crate punkt;
 
 use std::default::Default;
 
-use punkt::trainer::{TrainingData, Trainer};
+use punkt::trainer::Trainer;
 use punkt::tokenizer::SentenceTokenizer;
 
-let doc = ...;
+let doc: &str = ...;
 let mut data = Default::default();
 
 // Trainer requires a mutable reference to data, so it must be instantiated 
@@ -56,6 +56,34 @@ let mut data = Default::default();
 for sent in SentenceTokenizer::new(doc, &data) {
   println!("{:?}", sent);
 }
+```
+
+You can also manually train the tokenizer:
+
+```rust
+extern crate punkt;
+
+use std::default::Default;
+
+use punkt::trainer::Trainer;
+use punkt::tokenizer::SentenceTokenizer;
+
+let docs: Vec<&str> = vec![...];
+let mut data = Default::default();
+
+{
+  let mut trainer = Trainer::new(&mut data);
+
+  for d in docs.iter() {
+    trainer.train(*d);
+    trainer.finalize();
+  }
+}
+
+for sent in SentenceTokenizer::new(doc, &data) {
+  println!("{:?}", sent);
+}
+
 ```
 
 ## Benchmarks

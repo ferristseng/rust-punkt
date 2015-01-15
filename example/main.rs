@@ -5,14 +5,20 @@ use std::default::Default;
 use punkt::trainer::Trainer;
 
 fn main() {
+  let docs: Vec<&str> = vec![
+    include_str!("../test/raw/npr-article-01.txt"),
+    include_str!("../test/raw/ny-times-article-01.txt"),
+    include_str!("../test/raw/pride-and-prejudice.txt")
+  ];
   let mut data = Default::default(); 
   
   {
     let mut trainer = Trainer::new(&mut data);
 
-    trainer.train(include_str!("../test/raw/npr-article-01.txt"));
-    trainer.train(include_str!("../test/raw/ny-times-article-01.txt"));
-    trainer.train(include_str!("../test/raw/pride-and-prejudice.txt"));
+    for d in docs.iter() {
+      trainer.train(*d);
+    }
+
     trainer.finalize();
   }
 
