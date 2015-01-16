@@ -712,3 +712,34 @@ impl<'a, T: 'a, I> Iterator for ConsecutiveTokenIterator<'a, T, I>
     self.iter.size_hint()
   }
 }
+
+macro_rules! bench_trainer(
+  ($name:ident, $doc:expr) => (
+    #[bench]
+    fn $name(b: &mut Bencher) {
+      b.iter(|| {
+        let mut data = Default::default();
+        let mut trainer = Trainer::new(&mut data);
+
+        trainer.train($doc);
+        trainer.finalize();
+      })
+    }
+  )
+);
+
+bench_trainer!(
+  bench_trainer_short, 
+  include_str!("../../test/raw/sigma-wiki.txt"));
+
+bench_trainer!(
+  bench_trainer_medium,
+  include_str!("../../test/raw/npr-article-01.txt"));
+
+bench_trainer!(
+  bench_trainer_long,
+  include_str!("../../test/raw/the-sayings-of-confucius.txt"));
+
+bench_trainer!(
+  bench_trainer_very_long,
+  include_str!("../../test/raw/pride-and-prejudice.txt"));
