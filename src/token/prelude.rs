@@ -9,13 +9,13 @@ const IS_ABBREV         : u16 = 0b0000000000000100;
 const IS_SENTENCE_BREAK : u16 = 0b0000000000001000;
 const IS_PARAGRAPH_START: u16 = 0b0000000000010000;
 const IS_NEWLINE_START  : u16 = 0b0000000000100000;
+const IS_UPPERCASE      : u16 = 0b0000000001000000;
+const IS_LOWERCASE      : u16 = 0b0000000010000000;
 
 // These flags only use the upper 8 bits.
 const IS_INITIAL        : u16 = 0b1000000000000000;
 const IS_NUMERIC        : u16 = 0b0100000000000000;
 const IS_NON_PUNCT      : u16 = 0b0010000000000000;
-const IS_UPPERCASE      : u16 = 0b0001000000000000;
-const IS_LOWERCASE      : u16 = 0b0000100000000000;
 const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 
 /// Possible cases a letter can be in. OR (|) can be applied to these with 
@@ -167,6 +167,18 @@ pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
   fn has_final_period(&self) -> bool;
   fn is_paragraph_start(&self) -> bool;
   fn is_newline_start(&self) -> bool;
+  fn is_uppercase(&self) -> bool;
+  fn is_lowercase(&self) -> bool;
+
+  fn first_case(&self) -> LetterCase {
+    if self.is_lowercase() {
+      LetterCase::Lower
+    } else if self.is_uppercase() {
+      LetterCase::Upper
+    } else {
+      LetterCase::Unknown
+    }
+  }
 
   fn set_is_ellipsis(&mut self, b: bool);
   fn set_is_abbrev(&mut self, b: bool);
@@ -174,6 +186,8 @@ pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
   fn set_has_final_period(&mut self, b: bool);
   fn set_is_paragraph_start(&mut self, b: bool);
   fn set_is_newline_start(&mut self, b: bool);
+  fn set_is_uppercase(&mut self, b: bool);
+  fn set_is_lowercase(&mut self, b: bool);
 }
 
 /// Default implementation for a WordToken with flags, where the flags are 
@@ -181,6 +195,16 @@ pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
 impl<T> WordTokenWithFlagsOps<u8> for T 
   where T: WordTokenWithFlags<Flags = u8>
 {
+  #[inline]
+  fn is_uppercase(&self) -> bool {
+    *self.flags() & IS_UPPERCASE as u8 != 0
+  }
+
+  #[inline]
+  fn is_lowercase(&self) -> bool {
+    *self.flags() & IS_LOWERCASE as u8 != 0
+  }
+
   #[inline]
   fn is_ellipsis(&self) -> bool {
     *self.flags() & IS_ELLIPSIS as u8 != 0
@@ -264,12 +288,40 @@ impl<T> WordTokenWithFlagsOps<u8> for T
       *self.flags_mut() ^= IS_NEWLINE_START as u8;
     }
   }
+
+  #[inline]
+  fn set_is_uppercase(&mut self, b: bool) {
+    if b {
+      *self.flags_mut() |= IS_UPPERCASE as u8;
+    } else if self.is_uppercase() {
+      *self.flags_mut() ^= IS_UPPERCASE as u8;
+    }
+  }
+
+  #[inline]
+  fn set_is_lowercase(&mut self, b: bool) {
+    if b {
+      *self.flags_mut() |= IS_LOWERCASE as u8;
+    } else if self.is_lowercase() {
+      *self.flags_mut() ^= IS_LOWERCASE as u8;
+    }
+  }
 }
 
 /// Default implementation for a WordToken with flags, where the flags are u16.
 impl<T> WordTokenWithFlagsOps<u16> for T 
   where T: WordTokenWithFlags<Flags = u16>
 {
+  #[inline]
+  fn is_uppercase(&self) -> bool {
+    *self.flags() & IS_UPPERCASE != 0
+  }
+
+  #[inline]
+  fn is_lowercase(&self) -> bool {
+    *self.flags() & IS_LOWERCASE != 0
+  }
+
   #[inline]
   fn is_ellipsis(&self) -> bool {
     *self.flags() & IS_ELLIPSIS != 0
@@ -353,31 +405,35 @@ impl<T> WordTokenWithFlagsOps<u16> for T
       *self.flags_mut() ^= IS_NEWLINE_START;
     }
   }
+
+  #[inline]
+  fn set_is_uppercase(&mut self, b: bool) {
+    if b {
+      *self.flags_mut() |= IS_UPPERCASE;
+    } else if self.is_uppercase() {
+      *self.flags_mut() ^= IS_UPPERCASE;
+    }
+  }
+
+  #[inline]
+  fn set_is_lowercase(&mut self, b: bool) {
+    if b {
+      *self.flags_mut() |= IS_LOWERCASE;
+    } else if self.is_lowercase() {
+      *self.flags_mut() ^= IS_LOWERCASE;
+    }
+  }
 }
 
 /// Extended operations on a WordToken with flags. The flags must be expanded,
 /// (not u8), to account for the different flag parameters (u16 has a default 
 /// implementation).
 pub trait WordTokenWithFlagsOpsExt<T>: WordTokenWithFlags<Flags = T> {
-  fn is_uppercase(&self) -> bool;
-  fn is_lowercase(&self) -> bool;
   fn is_numeric(&self) -> bool;
   fn is_initial(&self) -> bool;
   fn is_non_punct(&self) -> bool;
   fn is_alphabetic(&self) -> bool;
 
-  fn first_case(&self) -> LetterCase {
-    if self.is_lowercase() {
-      LetterCase::Lower
-    } else if self.is_uppercase() {
-      LetterCase::Upper
-    } else {
-      LetterCase::Unknown
-    }
-  }
-
-  fn set_is_uppercase(&mut self, b: bool);
-  fn set_is_lowercase(&mut self, b: bool);
   fn set_is_numeric(&mut self, b: bool);
   fn set_is_initial(&mut self, b: bool);
   fn set_is_non_punct(&mut self, b: bool);
@@ -388,16 +444,6 @@ pub trait WordTokenWithFlagsOpsExt<T>: WordTokenWithFlags<Flags = T> {
 impl<T> WordTokenWithFlagsOpsExt<u16> for T 
   where T: WordTokenWithFlags<Flags = u16>
 {
-  #[inline]
-  fn is_uppercase(&self) -> bool {
-    *self.flags() & IS_UPPERCASE != 0
-  }
-
-  #[inline]
-  fn is_lowercase(&self) -> bool {
-    *self.flags() & IS_LOWERCASE != 0
-  }
-
   #[inline]
   fn is_numeric(&self) -> bool {
     *self.flags() & IS_NUMERIC != 0
@@ -416,24 +462,6 @@ impl<T> WordTokenWithFlagsOpsExt<u16> for T
   #[inline]
   fn is_alphabetic(&self) -> bool {
     *self.flags() & IS_ALPHABETIC != 0
-  }
-
-  #[inline]
-  fn set_is_uppercase(&mut self, b: bool) {
-    if b {
-      *self.flags_mut() |= IS_UPPERCASE;
-    } else if self.is_uppercase() {
-      *self.flags_mut() ^= IS_UPPERCASE;
-    }
-  }
-
-  #[inline]
-  fn set_is_lowercase(&mut self, b: bool) {
-    if b {
-      *self.flags_mut() |= IS_LOWERCASE;
-    } else if self.is_lowercase() {
-      *self.flags_mut() ^= IS_LOWERCASE;
-    }
   }
 
   #[inline]
@@ -511,6 +539,8 @@ fn test_training_token_flags() {
 fn test_sentence_word_token_flags() {
   let mut tok = SentenceWordToken::new("test");
   
+  tok.set_is_lowercase(false);
+
   assert_eq!(*tok.flags(), 0);
 
   perform_flag_test!(tok, set_is_ellipsis, is_ellipsis);
@@ -518,4 +548,6 @@ fn test_sentence_word_token_flags() {
   perform_flag_test!(tok, set_has_final_period, has_final_period);
   perform_flag_test!(tok, set_is_paragraph_start, is_paragraph_start);
   perform_flag_test!(tok, set_is_newline_start, is_newline_start);
+  perform_flag_test!(tok, set_is_uppercase, is_uppercase);
+  perform_flag_test!(tok, set_is_lowercase, is_lowercase);
 }

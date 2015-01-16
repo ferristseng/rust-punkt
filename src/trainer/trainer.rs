@@ -401,15 +401,6 @@ fn potential_collocation_iter<'a, 'b, I>(
   PotentialCollocationsIterator { iter: iter, trainer: trainer }
 }
 
-#[inline]
-fn consecutive_token_iter<'a, T, I>(
-  iter: I
-) -> ConsecutiveTokenIterator<'a, T, I>
-  where I: Iterator<Item = &'a T> 
-{
-  ConsecutiveTokenIterator { iter: iter, last: None }
-}
-
 /// A token and its associated score (likelihood of it being a abbreviation).
 type ScoredToken<'a> = (&'a TrainingToken, f64);
 
@@ -670,6 +661,16 @@ impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'a, 'b, I>
   fn size_hint(&self) -> (usize, Option<usize>) {
     self.iter.size_hint()
   }
+}
+
+/// Constructor for a consecutive token iterator.
+#[inline]
+fn consecutive_token_iter<'a, T, I>(
+  iter: I
+) -> ConsecutiveTokenIterator<'a, T, I>
+  where I: Iterator<Item = &'a T> 
+{
+  ConsecutiveTokenIterator { iter: iter, last: None }
 }
 
 /// Iterates over every PuntkToken from the supplied iterator and returns 

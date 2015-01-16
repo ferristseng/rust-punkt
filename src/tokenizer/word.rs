@@ -10,7 +10,7 @@ use token::prelude::WordToken;
 
 use phf::Set;
 
-static DEFAULT: WordTokenizerParameters = WordTokenizerParameters {
+pub static DEFAULT: WordTokenizerParameters = WordTokenizerParameters {
   non_pref: &phf_set![
     '(', '"', '`', '{', '[', ':', ';', '&', '#', '*', '@', ')', '}', ']', '-', ','
   ],
@@ -267,9 +267,8 @@ fn word_tokenizer_compare_nltk() {
       let expf = fs::File::open(&path).read_to_string().unwrap();
       let rawf = fs::File::open(&rawp).read_to_string().unwrap();
       let exps = expf.split('\n');
-      let tokr = WordTokenizer::new(rawf.as_slice());
 
-      for (t, e) in tokr.zip(exps) {
+      for (t, e) in WordTokenizer::new(rawf.as_slice()).zip(exps) {
         assert!(
           t.typ() == e.trim(), 
           "{} - you: [{}] != exp: [{}]", 

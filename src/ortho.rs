@@ -26,6 +26,8 @@ pub const UNK_UC: OrthographicContext = 0b00001000;
 pub const BEG_LC: OrthographicContext = 0b00010000;
 pub const MID_LC: OrthographicContext = 0b00100000;
 pub const UNK_LC: OrthographicContext = 0b01000000;
+pub const ORT_UC: OrthographicContext = BEG_UC | MID_UC | UNK_UC; 
+pub const ORT_LC: OrthographicContext = BEG_LC | MID_LC | UNK_LC;
 
 /// Map mapping a combination of LetterCase and OrthographyPosition 
 /// to an OrthographicConstant describing orthographic attributes about the 
