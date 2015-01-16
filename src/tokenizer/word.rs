@@ -280,26 +280,29 @@ fn word_tokenizer_compare_nltk() {
   }
 }
 
-#[bench]
-fn word_tokenizer_bench_short(b: &mut Bencher) {
-  b.iter(|| {
-    let _: Vec<TrainingToken> = WordTokenizer::new(
-      include_str!("../../test/raw/sigma-wiki.txt")).collect();
-  })
-}
+macro_rules! bench_word_tokenizer(
+  ($name:ident, $doc:expr) => (
+    #[bench]
+    fn $name(b: &mut Bencher) {
+      b.iter(|| {
+        let _: Vec<TrainingToken> = WordTokenizer::new($doc).collect();
+      })
+    }
+  )
+);
 
-#[bench]
-fn word_tokenizer_bench_long(b: &mut Bencher) {
-  b.iter(|| {
-    let _: Vec<TrainingToken> = WordTokenizer::new(
-      include_str!("../../test/raw/the-sayings-of-confucius.txt")).collect();
-  })
-}
+bench_word_tokenizer!(
+  word_tokenizer_bench_short, 
+  include_str!("../../test/raw/sigma-wiki.txt"));
 
-#[bench]
-fn word_tokenizer_bench_very_long(b: &mut Bencher) {
-  b.iter(|| {
-    let _: Vec<TrainingToken> = WordTokenizer::new(
-      include_str!("../../test/raw/pride-and-prejudice.txt")).collect();
-  })
-}
+bench_word_tokenizer!(
+  word_tokenizer_bench_medium,
+  include_str!("../../test/raw/npr-article-01.txt"));
+
+bench_word_tokenizer!(
+  word_tokenizer_bench_long,
+  include_str!("../../test/raw/the-sayings-of-confucius.txt"));
+
+bench_word_tokenizer!(
+  word_tokenizer_bench_very_long,
+  include_str!("../../test/raw/pride-and-prejudice.txt"));

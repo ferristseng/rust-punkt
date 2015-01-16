@@ -1,5 +1,5 @@
 #![allow(unstable)]
-#![feature(plugin)]
+#![feature(plugin,)]
 
 /// # Overview
 ///

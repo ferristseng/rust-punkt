@@ -1,5 +1,6 @@
 #[cfg(test)] use std::io::fs;
 #[cfg(test)] use std::io::fs::PathExtensions;
+#[cfg(test)] use test::Bencher;
 #[cfg(test)] use trainer::Trainer;
 
 use std::default::Default;
@@ -214,6 +215,15 @@ fn annotate_second_pass<F, T>(
   }
 }
 
+#[cfg(test)]
+#[inline]
+fn train_on_document(data: &mut TrainingData, doc: &str) {
+  let mut trainer = Trainer::new(data);
+
+  trainer.train(doc);
+  trainer.finalize();
+}
+
 #[test]
 fn sentence_tokenizer_compare_nltk_train_on_document() {
   for path in fs::walk_dir(&Path::new("test/sentence/")).unwrap() {
@@ -224,12 +234,7 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
       let exps = expf.split('\n');
       let mut data = Default::default();
 
-      {
-        let mut trainer = Trainer::new(&mut data);
-
-        trainer.train(rawf.as_slice());
-        trainer.finalize();
-      }
+      train_on_document(&mut data, rawf.as_slice());
 
       for (t, e) in SentenceTokenizer::new(rawf.as_slice(), &data).zip(exps) {
         let s = format!("[{}]", t)
@@ -247,3 +252,32 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
     }
   }
 }
+
+macro_rules! bench_sentence_tokenizer(
+  ($name:ident, $doc:expr) => (
+    #[bench]
+    fn $name(b: &mut Bencher) {
+      let doc = $doc;
+
+      b.iter(|| {
+        let mut data = Default::default();
+
+        train_on_document(&mut data, doc);
+
+        let _: Vec<&str> = SentenceTokenizer::new(doc, &mut data).collect();
+      })
+    }
+  )
+);
+
+bench_sentence_tokenizer!(
+  bench_sentence_tokenizer_train_on_document_short, 
+  include_str!("../../test/raw/sigma-wiki.txt"));
+
+bench_sentence_tokenizer!(
+  bench_sentence_tokenizer_train_on_document_medium,
+  include_str!("../../test/raw/npr-article-01.txt"));
+
+bench_sentence_tokenizer!(
+  bench_sentence_tokenizer_train_on_document_long,
+  include_str!("../../test/raw/pride-and-prejudice.txt"));
