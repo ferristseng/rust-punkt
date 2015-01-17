@@ -88,6 +88,25 @@ for sent in SentenceTokenizer::new(doc, &data) {
 
 ## Benchmarks
 
+Specs of my machine:
+
+  * i5-4460 @ 3.20 x 4
+  * 8 GB RAM
+  * Fedora 20
+  * SSD
+
 ```
-TODO
+test tokenizer::sentence::bench_sentence_tokenizer_train_on_document_long   ... bench: 126307934 ns/iter (+/- 2396747)
+test tokenizer::sentence::bench_sentence_tokenizer_train_on_document_medium ... bench:    873410 ns/iter (+/- 32674)
+test tokenizer::sentence::bench_sentence_tokenizer_train_on_document_short  ... bench:    680775 ns/iter (+/- 21910)
+test tokenizer::word::word_tokenizer_bench_long                             ... bench:  10532662 ns/iter (+/- 349243)
+test tokenizer::word::word_tokenizer_bench_medium                           ... bench:    223920 ns/iter (+/- 10958)
+test tokenizer::word::word_tokenizer_bench_short                            ... bench:    187889 ns/iter (+/- 17145)
+test tokenizer::word::word_tokenizer_bench_very_long                        ... bench:  36701973 ns/iter (+/- 1131175)
+test trainer::trainer::bench_trainer_long                                   ... bench:  25637329 ns/iter (+/- 794873)
+test trainer::trainer::bench_trainer_medium                                 ... bench:    616952 ns/iter (+/- 41141)
+test trainer::trainer::bench_trainer_short                                  ... bench:    478615 ns/iter (+/- 29167)
+test trainer::trainer::bench_trainer_very_long                              ... bench:  87842418 ns/iter (+/- 1961972)
 ```
+
+For sentence tokenization, and training on the input document, the Rust implementation runs roughly 10x faster than the Python implementations. I used timeit on the `tokenize` method after calling `train` to benchmark this.
