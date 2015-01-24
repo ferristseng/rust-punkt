@@ -1,6 +1,6 @@
 use std::hash::Hash;
 use std::borrow::BorrowFrom;
-use std::fmt::{Show, Formatter, Result};
+use std::fmt::{Debug, Display, Formatter, Result};
 
 use xxhash::XXHasher;
 
@@ -92,7 +92,15 @@ impl<'a> WordTokenWithPeriod for SentenceWordToken<'a> {
   }
 }
 
-impl<'a> Show for SentenceWordToken<'a> {
+impl<'a> Display for SentenceWordToken<'a> {
+  #[inline]
+  fn fmt(&self, fmt: &mut Formatter) -> Result {
+    Debug::fmt(&self, fmt)
+  }
+}
+
+impl<'a> Debug for SentenceWordToken<'a> {
+  #[inline]
   fn fmt(&self, fmt: &mut Formatter) -> Result {
     write!(fmt, "{}", self.slice) 
   }

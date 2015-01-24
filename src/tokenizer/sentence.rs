@@ -102,10 +102,10 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
 
             return if tok_start == slice_end {
               self.last = slice_end - 1;
-              Some(self.doc.slice(start, slice_end - 1))
+              Some(&self.doc[start..slice_end - 1])
             } else {
               self.last = tok_start;
-              Some(self.doc.slice(start, ws_start))
+              Some(&self.doc[start..ws_start])
             }
           }
         }

@@ -1,7 +1,7 @@
 use std::rc::Rc;
 use std::hash::Hash;
 use std::borrow::BorrowFrom;
-use std::fmt::{Show, Formatter, Result};
+use std::fmt::{Debug, Display, Formatter, Result};
 
 use xxhash::XXHasher;
 
@@ -101,7 +101,15 @@ impl WordTokenWithPeriod for TrainingToken {
   }
 }
 
-impl Show for TrainingToken {
+impl Display for TrainingToken {
+  #[inline]
+  fn fmt(&self, fmt: &mut Formatter) -> Result {
+    Debug::fmt(&self, fmt)
+  }
+}
+
+impl Debug for TrainingToken {
+  #[inline]
   fn fmt(&self, fmt: &mut Formatter) -> Result {
     write!(fmt, "{}", self.typ()) 
   }

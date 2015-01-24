@@ -67,7 +67,7 @@ impl<F, T> WordToken for T
     if self.has_final_period() {
       self.token_with_period()
     } else {
-      self.token_with_period().slice_to(self.token_with_period().len() - 1)
+      &self.token_with_period()[..self.token_with_period().len() - 1]
     }
   }
 }
@@ -88,7 +88,7 @@ impl<F, T> WordTokenWithoutPeriod for T
   #[inline]
   fn token_without_period(&self) -> &str {
     if self.has_final_period() {
-      self.token().slice_to(self.len() - 1)
+      &self.token()[..self.len() - 1]
     } else {
       self.token()
     }
@@ -133,7 +133,7 @@ impl<F, T> WordTypeToken for T
   #[inline]
   fn typ_without_period(&self) -> &str {
     if self.token().len() > 1 && self.has_final_period() {
-      self.typ_with_period().slice_to(self.typ_with_period().len() - 1)
+      &self.typ_with_period()[..self.typ_with_period().len() - 1]
     } else {
       self.typ()
     }

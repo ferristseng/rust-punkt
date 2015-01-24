@@ -184,7 +184,7 @@ impl<'a> Trainer<'a> {
 
     // Acquire the slice from `self.tokens` of tokens only found from this 
     // document.
-    let slice = self.tokens.slice_from(start);
+    let slice = &self.tokens[start..];
 
     // Keep counts of each type for each token in `self.type_fdist`.
     for t in slice.iter() {
@@ -310,7 +310,7 @@ fn is_rare_abbrev_type(
     // Count all variations of the token
     let count = 
       *trainer.type_fdist.get(key).unwrap_or(&0) + 
-      *trainer.type_fdist.get(key.slice_to(key.len() - 1)).unwrap_or(&0);
+      *trainer.type_fdist.get(&key[..key.len() - 1]).unwrap_or(&0);
 
     if trainer.data.contains_abbrev(tok0.typ()) || 
        (count as f64) >= trainer.params.abbrev_upper_bound 

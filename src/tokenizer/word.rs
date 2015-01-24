@@ -244,7 +244,7 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
   }
 
   if end - start > 1 {
-    Some(doc.slice(start, end))
+    Some(&doc[start..end])
   } else {
     None
   }
