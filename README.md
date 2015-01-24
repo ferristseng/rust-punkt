@@ -1,5 +1,7 @@
 # Punkt
 
+[![Build Status](https://travis-ci.org/ferristseng/rust-punkt.svg)](https://travis-ci.org/ferristseng/rust-punkt)
+
 Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence tokenization.
 Includes a word tokenizer that tokenizes words based on regexes defined in Python's
 NLTK library. Results have been compared with small and large texts that have been
