@@ -3,7 +3,7 @@ use phf::Map;
 pub type OrthographicContext = u8;
 
 /// Context that a token can be in.
-#[derive(Show, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum OrthographyPosition {
   Initial,
   Internal,

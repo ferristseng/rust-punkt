@@ -1,6 +1,3 @@
-#[cfg(test)] use std::io::fs;
-#[cfg(test)] use std::io::fs::PathExtensions;
-
 use std::default::Default;
 
 use phf::Set;
@@ -38,7 +35,7 @@ impl<'a> PeriodContextTokenizer<'a> {
 
   #[inline]
   pub fn with_parameters(
-    doc: &'a str, 
+    doc: &'a str,
     params: &'a PeriodContextTokenizerParameters
   ) -> PeriodContextTokenizer<'a> {
     PeriodContextTokenizer {
@@ -58,12 +55,12 @@ impl<'a> PeriodContextTokenizer<'a> {
       let cur = self.doc.char_at(pos);
 
       match cur {
-        // A whitespace is reached before a sentence ending character 
+        // A whitespace is reached before a sentence ending character
         // that could signal the continuation of a token is.
         c if c.is_whitespace() => return None,
-        // A sentence ending is reached. Check if it could be the beginning 
-        // of a new token (if there is a space after it, or if the next 
-        // character is puntuation). 
+        // A sentence ending is reached. Check if it could be the beginning
+        // of a new token (if there is a space after it, or if the next
+        // character is puntuation).
         c if self.params.sent_end.contains(&c) => {
           let nxt = self.doc.char_at(pos + cur.len_utf8());
 
@@ -113,7 +110,7 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
             }
 
             return Some((
-              self.doc.slice(astart, end),
+              &self.doc[astart..end],
               nstart,
               wstart,
               end));
@@ -212,25 +209,12 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
 
 #[test]
 fn periodctxt_tokenizer_compare_nltk() {
-  for path in fs::walk_dir(&Path::new("test/word-periodctxt/")).unwrap() {
-    if path.is_file() {
-      let rawp = Path::new("test/raw/").join(path.filename_str().unwrap());
-      let expf = fs::File::open(&path).read_to_string().unwrap();
-      let rawf = fs::File::open(&rawp).read_to_string().unwrap();
-      let exps = expf.split('\n');
-      let tokr = PeriodContextTokenizer::new(rawf.as_slice());
+  for (expected, raw, file) in super::get_test_scenarios("test/word-periodctxt/", "test/raw/") {
+    for ((t, _, _, _), e)  in PeriodContextTokenizer::new(&raw[..]).zip(expected) {
+      let t = t.replace("\n", r"\n").replace("\r", "");
+      let e = e.replace("\r", "");
 
-      for ((t, _, _, _), e) in tokr.zip(exps) {
-        let t = t.replace("\n", r"\n").replace("\r", "");
-        let e = e.replace("\r", "");
-
-        assert!(
-          t == e, 
-          "{} - you: [{}] != exp: [{}]",
-          path.filename_str().unwrap(),
-          t,
-          e);
-      }
+      assert!(t == e, "{} - you: [{}] != exp: [{}]", file, t, e);
     }
   }
 }

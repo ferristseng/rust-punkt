@@ -1,4 +1,4 @@
-use std::num::Float;
+use num::Float;
 
 /// From the original paper.
 pub fn dunning_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64) -> f64 {

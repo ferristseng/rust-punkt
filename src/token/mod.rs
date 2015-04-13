@@ -1,3 +1,5 @@
+/// Representation of a string token needed by the Punkt algorithm. 
+
 pub use token::sword::SentenceWordToken;
 pub use token::training::TrainingToken;
 

@@ -1,13 +1,11 @@
 use std::ops::Deref;
-use std::hash::Hash;
-
-use xxhash::XXHasher;
+use std::hash::{Hasher, Hash};
 
 use token::prelude::WordTypeToken;
 
 /// A collocation. A normal Tuple can not be used, because a collocation
 /// as defined by NLTK requires a special hash function. 
-#[derive(Show)]
+#[derive(Debug)]
 pub struct Collocation<T> {
   l: T,
   r: T
@@ -34,11 +32,12 @@ impl<T, D> Eq for Collocation<D>
   where T: WordTypeToken, D: Deref<Target = T> 
 { }
 
-impl<T, D> Hash<XXHasher> for Collocation<D>
+impl<T, D> Hash for Collocation<D>
   where T: WordTypeToken, D: Deref<Target = T> 
 {
   #[inline]
-  fn hash(&self, state: &mut XXHasher) {
+  fn hash<H>(&self, state: &mut H) where H : Hasher
+  {
     (*self.l).typ_without_period().hash(state); 
     (*self.r).typ_without_break_or_period().hash(state);
   }

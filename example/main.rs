@@ -1,3 +1,5 @@
+#![feature(collections)]
+
 extern crate punkt;
 
 use std::default::Default;
@@ -9,9 +11,9 @@ fn main() {
   let example_num: usize = 0;
 
   let docs: Vec<&str> = vec![
-    //include_str!("../test/raw/npr-article-01.txt"),
+    include_str!("../test/raw/npr-article-01.txt"),
     include_str!("../test/raw/ny-times-article-01.txt"),
-    //include_str!("../test/raw/pride-and-prejudice.txt")
+    include_str!("../test/raw/pride-and-prejudice.txt")
   ];
 
   match example_num {

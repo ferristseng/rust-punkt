@@ -1,5 +1,3 @@
-#[cfg(test)] use std::io::fs;
-#[cfg(test)] use std::io::fs::PathExtensions;
 #[cfg(test)] use test::Bencher;
 #[cfg(test)] use trainer::Trainer;
 
@@ -15,41 +13,59 @@ use tokenizer::word::DEFAULT as WORD_DEFAULTS;
 use tokenizer::periodctxt::PeriodContextTokenizer;
 use token::prelude::{WordTokenWithFlagsOps, WordTypeToken, WordTokenWithFlagsOpsExt};
 
-static DEFAULT: SentenceTokenizerParams<'static> = SentenceTokenizerParams {
+static DEFAULT: SentenceTokenizerParameters<'static> = SentenceTokenizerParameters {
   wtokp: &WORD_DEFAULTS,
   punct: &phf_set![';', ':', ',', '.', '!', '?']
 };
 
-pub struct SentenceTokenizerParams<'a> {
+/// Parameters for a sentence tokenizer.
+pub struct SentenceTokenizerParameters<'a> {
+  /// Parameters to use when creating a word tokenizer internally.
   pub wtokp: &'a WordTokenizerParameters,
+
+  /// Characters considered as punctuation.
   pub punct: &'a Set<char>
 }
 
-impl<'a> Default for &'static SentenceTokenizerParams<'a> {
-  fn default() -> &'static SentenceTokenizerParams<'a> {
+impl<'a> Default for &'static SentenceTokenizerParameters<'a> {
+  fn default() -> &'static SentenceTokenizerParameters<'a> {
     &DEFAULT
   }
 }
 
+/// Tokenizes a document into sentences using the Punkt algorithm (iterable).
 pub struct SentenceTokenizer<'a> {
   doc: &'a str,
   iter: PeriodContextTokenizer<'a>,
   data: &'a TrainingData,
   last: usize,
-  pub params: &'a SentenceTokenizerParams<'a>
+  #[allow(missing_docs)] pub params: &'a SentenceTokenizerParameters<'a>
 }
 
 impl<'a> SentenceTokenizer<'a> {
+  /// Creates a new sentence tokenizer across a document, using the provided data 
+  /// to perform tokenization.
+  #[inline]
   pub fn new(
     doc: &'a str, 
     data: &'a TrainingData
+  ) -> SentenceTokenizer<'a> {
+    SentenceTokenizer::with_parameters(doc, data, Default::default())
+  }
+
+  /// Creates a new sentence tokenizer with custom parameters
+  #[inline]
+  pub fn with_parameters(
+    doc: &'a str,
+    data: &'a TrainingData,
+    params: &'a SentenceTokenizerParameters
   ) -> SentenceTokenizer<'a> {
     SentenceTokenizer {
       doc: doc,
       iter: PeriodContextTokenizer::new(doc),
       data: data,
       last: 0,
-      params: Default::default()
+      params: params
     }
   }
 }
@@ -215,40 +231,35 @@ fn annotate_second_pass<F, T>(
   }
 }
 
-#[cfg(test)]
-#[inline]
+#[inline] #[cfg(test)]
 fn train_on_document(data: &mut TrainingData, doc: &str) {
   let mut trainer = Trainer::new(data);
 
-  trainer.train(doc);
+  trainer.train(&doc);
   trainer.finalize();
 }
 
 #[test]
 fn sentence_tokenizer_compare_nltk_train_on_document() {
-  for path in fs::walk_dir(&Path::new("test/sentence/")).unwrap() {
-    if path.is_file() {
-      let rawp = Path::new("test/raw/").join(path.filename_str().unwrap());
-      let expf = fs::File::open(&path).read_to_string().unwrap();
-      let rawf = fs::File::open(&rawp).read_to_string().unwrap();
-      let exps = expf.split('\n');
-      let mut data = Default::default();
+  let cases = super::get_test_scenarios("test/sentence/", "test/raw/");
 
-      train_on_document(&mut data, rawf.as_slice());
+  for (expected, raw, file) in cases {
+    let mut data = Default::default();
 
-      for (t, e) in SentenceTokenizer::new(rawf.as_slice(), &data).zip(exps) {
-        let s = format!("[{}]", t)
-          .replace("\"", "\\\"")
-          .replace("\n", "\\n")
-          .replace("\r", "");
+    train_on_document(&mut data, &raw[..]);
 
-        assert!(
-          s == e.trim(),
-          "{} - you: [{}] != exp: [{}]", 
-          path.filename_str().unwrap(),
-          s,
-          e.trim())
-      }
+    for (t, e) in SentenceTokenizer::new(&raw[..], &data).zip(expected.iter()) {
+      let s = format!("[{}]", t)
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "");
+
+      assert!(
+        s == e.trim(),
+        "{} - you: [{}] != exp: [{}]", 
+        file,
+        s,
+        e.trim())
     }
   }
 }

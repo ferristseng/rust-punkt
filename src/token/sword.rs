@@ -1,8 +1,6 @@
-use std::hash::Hash;
-use std::borrow::BorrowFrom;
+use std::hash::{Hash, Hasher};
+use std::borrow::Borrow;
 use std::fmt::{Debug, Display, Formatter, Result};
-
-use xxhash::XXHasher;
 
 use token::prelude::{
   WordToken,
@@ -10,6 +8,9 @@ use token::prelude::{
   WordTokenWithFlags,
   WordTokenWithFlagsOps};
 
+/// A word token within a sentence. The token contains a reference to the original
+/// slice in the document that the token was constructed from, and can be acquired 
+/// with `original()`.
 pub struct SentenceWordToken<'a> {
   slice: &'a str,
   inner: String,
@@ -46,7 +47,9 @@ impl<'a> SentenceWordToken<'a> {
 
     // Builds a normalized version of the slice from the slice.
     for c in slice.chars() { 
-      tok.inner.push(c.to_lowercase())
+      for c0 in c.to_lowercase() {
+        tok.inner.push(c0);
+      }
     }
 
     if !tok.has_final_period() {
@@ -88,7 +91,7 @@ impl<'a> WordTokenWithFlags for SentenceWordToken<'a> {
 impl<'a> WordTokenWithPeriod for SentenceWordToken<'a> {
   #[inline]
   fn token_with_period(&self) -> &str {
-    self.inner.as_slice()
+    &self.inner[..]
   }
 }
 
@@ -115,16 +118,16 @@ impl<'a> PartialEq for SentenceWordToken<'a> {
   }
 }
 
-impl<'a> Hash<XXHasher> for SentenceWordToken<'a> {
+impl<'a> Hash for SentenceWordToken<'a> {
   #[inline]
-  fn hash(&self, state: &mut XXHasher) {
+  fn hash<H>(&self, state: &mut H) where H: Hasher {
     self.token().hash(state)
   }
 }
 
-impl<'a> BorrowFrom<SentenceWordToken<'a>> for str {
+impl<'a> Borrow<str> for SentenceWordToken<'a> {
   #[inline]
-  fn borrow_from<'b>(owned: &'b SentenceWordToken) -> &'b str {
-    owned.token()
+  fn borrow<'b>(&'b self) -> &'b str {
+    self.token()
   }
 }

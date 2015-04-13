@@ -1,6 +1,4 @@
 #[cfg(test)] use test::Bencher;
-#[cfg(test)] use std::io::fs;
-#[cfg(test)] use std::io::fs::PathExtensions;
 #[cfg(test)] use token::prelude::WordTypeToken;
 
 use std::default::Default;
@@ -19,9 +17,14 @@ pub static DEFAULT: WordTokenizerParameters = WordTokenizerParameters {
   ]
 };
 
-#[derive(Copy)]
+/// Character settings for a `WordTokenizer`. By default, uses parameters defined in 
+/// NLTK.
+#[derive(Clone, Copy)]
 pub struct WordTokenizerParameters {
+  /// Characters excluded from starting word tokens. 
   pub non_pref: &'static Set<char>,
+
+  /// Non-word characters
   pub non_word: &'static Set<char>
 }
 
@@ -31,13 +34,16 @@ impl Default for &'static WordTokenizerParameters {
   }
 }
 
+/// Tokenizes a document into words (iterable).
 pub struct WordTokenizer<'a> {
   pos: usize,
   doc: &'a str,
-  pub params: &'a WordTokenizerParameters
+  #[allow(missing_docs)] pub params: &'a WordTokenizerParameters
 }
 
 impl<'a> WordTokenizer<'a> {
+  /// Creates a new word tokenizer to iterate over words in a document.
+  #[inline]
   pub fn new(doc: &'a str) -> WordTokenizer<'a> {
     WordTokenizer {
       pos: 0,
@@ -46,10 +52,12 @@ impl<'a> WordTokenizer<'a> {
     }
   }
 
+  /// Creates a new word tokenizer, with custom parameters.
+  #[inline]
   pub fn with_parameters(
-    doc: &'a str, 
+    doc: &'a str,
     params: &'a WordTokenizerParameters
-  ) -> WordTokenizer<'a> {
+    ) -> WordTokenizer<'a> {
     WordTokenizer {
       pos: 0,
       doc: doc,
@@ -89,7 +97,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
             }
 
             return Some(TrainingToken::new(
-              self.doc.slice(start, self.pos),
+              &self.doc[start..self.pos],
               is_ellipsis, 
               state & PARAGPH_START != 0,
               state & NEWLINE_START != 0));
@@ -261,21 +269,14 @@ fn smoke_test_is_multi_char_pass() {
 
 #[test]
 fn word_tokenizer_compare_nltk() {
-  for path in fs::walk_dir(&Path::new("test/word-training/")).unwrap() {
-    if path.is_file() {
-      let rawp = Path::new("test/raw/").join(path.filename_str().unwrap());
-      let expf = fs::File::open(&path).read_to_string().unwrap();
-      let rawf = fs::File::open(&rawp).read_to_string().unwrap();
-      let exps = expf.split('\n');
-
-      for (t, e) in WordTokenizer::new(rawf.as_slice()).zip(exps) {
-        assert!(
-          t.typ() == e.trim(), 
-          "{} - you: [{}] != exp: [{}]", 
-          path.filename_str().unwrap(),
-          t.typ(),
-          e.trim());
-      }
+  for (expected, raw, file) in super::get_test_scenarios("test/word-training", "test/raw/") {
+    for (t, e) in WordTokenizer::new(&raw[..]).zip(expected) {
+      assert!(
+        t.typ() == e.trim(), 
+        "{} - you: [{}] != exp: [{}]", 
+        file,
+        t.typ(),
+        e.trim());
     }
   }
 }

@@ -21,7 +21,7 @@ const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 /// Possible cases a letter can be in. OR (|) can be applied to these with 
 /// a OrthographyPosition to get a corrosponding OrthographicContext from 
 /// OrthoMap.
-#[derive(Show, Eq, PartialEq, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum LetterCase {
   Upper,
   Lower,
@@ -41,11 +41,13 @@ impl LetterCase {
 /// A word token with a representation of the token WITH a period appended
 /// onto the end.
 pub trait WordTokenWithPeriod {
+  /// Returns the token with a period at the end.
   fn token_with_period(&self) -> &str;
 }
 
 /// A representable word token. 
 pub trait WordToken {
+  /// Returns a normalized (lowercase) representation of the original token.
   fn token(&self) -> &str;
 
   /// The length of the token.
@@ -75,6 +77,7 @@ impl<F, T> WordToken for T
 /// A word token with a representation of the token WITHOUT a period (if 
 /// the original word token contained one).
 pub trait WordTokenWithoutPeriod {
+  /// Returns the token with any final period truncated.
   fn token_without_period(&self) -> &str;
 }
 
@@ -83,8 +86,7 @@ impl<F, T> WordTokenWithoutPeriod for T
            WordTokenWithFlags<Flags = F> + 
            WordTokenWithFlagsOps<F>
 {
-  /// Returns the token without a period on the end (if it had one), given 
-  /// that the flags on the token are correct.
+  /// Returns the token without a period on the end (if it had one).
   #[inline]
   fn token_without_period(&self) -> &str {
     if self.has_final_period() {
@@ -98,9 +100,19 @@ impl<F, T> WordTokenWithoutPeriod for T
 /// A word token that has a type associated with it. The type can be 
 /// represented with or without a period or without a sentence break.
 pub trait WordTypeToken: WordToken {
+  /// The type of the token. Returns `##number##`, if the token is a number.
   fn typ(&self) -> &str;
+
+  /// Returns the type of the token, with a period appended to the end, if the 
+  /// original token did not already have one.
   fn typ_with_period(&self) -> &str;
+
+  /// Returns the type of the token without a period on the end, if it originally
+  /// had one.
   fn typ_without_period(&self) -> &str;
+
+  /// Returns the type of the token without a final period or breaks on the end, 
+  /// if it originally had one.
   fn typ_without_break_or_period(&self) -> &str;
 }
 
@@ -139,6 +151,8 @@ impl<F, T> WordTypeToken for T
     }
   }
 
+  /// Returns the type of the token without a break or period if it had one originally 
+  /// at the end.
   #[inline]
   fn typ_without_break_or_period(&self) -> &str {
     if self.is_sentence_break() {
@@ -153,23 +167,29 @@ impl<F, T> WordTypeToken for T
 /// These should be set either during construction, or during a processing 
 /// stage.
 pub trait WordTokenWithFlags: WordToken {
+  /// The type of flags that the word token has. Usually `u8`, `u32`, etc...
   type Flags;
 
+  /// Returns flags that represent qualities about the word token. 
   fn flags(&self) -> &<Self as WordTokenWithFlags>::Flags;
+
+  /// Returns a mutable reference of the token's flags.
   fn flags_mut(&mut self) -> &mut <Self as WordTokenWithFlags>::Flags;
 }
 
 /// Operations performable on a WordToken with flags. 
 pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
-  fn is_ellipsis(&self) -> bool;
-  fn is_abbrev(&self) -> bool;
-  fn is_sentence_break(&self) -> bool;
-  fn has_final_period(&self) -> bool;
-  fn is_paragraph_start(&self) -> bool;
-  fn is_newline_start(&self) -> bool;
-  fn is_uppercase(&self) -> bool;
-  fn is_lowercase(&self) -> bool;
+  #[allow(missing_docs)] fn is_ellipsis(&self) -> bool;
+  #[allow(missing_docs)] fn is_abbrev(&self) -> bool;
+  #[allow(missing_docs)] fn is_sentence_break(&self) -> bool;
+  #[allow(missing_docs)] fn has_final_period(&self) -> bool;
+  #[allow(missing_docs)] fn is_paragraph_start(&self) -> bool;
+  #[allow(missing_docs)] fn is_newline_start(&self) -> bool;
+  #[allow(missing_docs)] fn is_uppercase(&self) -> bool;
+  #[allow(missing_docs)] fn is_lowercase(&self) -> bool;
 
+ 
+  #[allow(missing_docs)]
   fn first_case(&self) -> LetterCase {
     if self.is_lowercase() {
       LetterCase::Lower
@@ -180,14 +200,14 @@ pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
     }
   }
 
-  fn set_is_ellipsis(&mut self, b: bool);
-  fn set_is_abbrev(&mut self, b: bool);
-  fn set_is_sentence_break(&mut self, b: bool);
-  fn set_has_final_period(&mut self, b: bool);
-  fn set_is_paragraph_start(&mut self, b: bool);
-  fn set_is_newline_start(&mut self, b: bool);
-  fn set_is_uppercase(&mut self, b: bool);
-  fn set_is_lowercase(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_ellipsis(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_abbrev(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_sentence_break(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_has_final_period(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_paragraph_start(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_newline_start(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_uppercase(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_lowercase(&mut self, b: bool);
 }
 
 /// Default implementation for a WordToken with flags, where the flags are 
@@ -429,15 +449,15 @@ impl<T> WordTokenWithFlagsOps<u16> for T
 /// (not u8), to account for the different flag parameters (u16 has a default 
 /// implementation).
 pub trait WordTokenWithFlagsOpsExt<T>: WordTokenWithFlags<Flags = T> {
-  fn is_numeric(&self) -> bool;
-  fn is_initial(&self) -> bool;
-  fn is_non_punct(&self) -> bool;
-  fn is_alphabetic(&self) -> bool;
+  #[allow(missing_docs)] fn is_numeric(&self) -> bool;
+  #[allow(missing_docs)] fn is_initial(&self) -> bool;
+  #[allow(missing_docs)] fn is_non_punct(&self) -> bool;
+  #[allow(missing_docs)] fn is_alphabetic(&self) -> bool;
 
-  fn set_is_numeric(&mut self, b: bool);
-  fn set_is_initial(&mut self, b: bool);
-  fn set_is_non_punct(&mut self, b: bool);
-  fn set_is_alphabetic(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_numeric(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_initial(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_non_punct(&mut self, b: bool);
+  #[allow(missing_docs)] fn set_is_alphabetic(&mut self, b: bool);
 }
 
 /// Default implementation for a WordToken with flags, where the flags are u16.

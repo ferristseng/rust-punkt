@@ -1,12 +1,12 @@
 #[cfg(test)] use test::Bencher;
 
-use std::rc::Rc;
 use std::cmp::min;
-use std::num::Float;
 use std::ops::Deref;
 use std::default::Default;
+use collections::borrow::Borrow;
 
 use phf::Set;
+use num::Float;
 use freqdist::{Distribution, FrequencyDistribution};
 
 use token::TrainingToken;
@@ -19,6 +19,7 @@ use token::prelude::{
 
 use util;
 use trainer::math;
+use trainer::TrainingTokenKey;
 use trainer::col::Collocation;
 use trainer::data::TrainingData;
 use tokenizer::{WordTokenizer, WordTokenizerParameters};
@@ -118,16 +119,16 @@ pub struct Trainer<'a> {
 
   /// A list of all tokens encountered. Other fields reference Tokens
   /// from here.
-  tokens: Vec<Rc<TrainingToken>>,
+  tokens: Vec<TrainingTokenKey>,
 
   /// A frequency distribution of all Tokens encountered.
-  type_fdist: FrequencyDistribution<Rc<TrainingToken>>,
+  type_fdist: FrequencyDistribution<TrainingTokenKey>,
 
   /// A frequency distribution of all collocations encountered.
-  collocation_fdist: FrequencyDistribution<Collocation<Rc<TrainingToken>>>,
+  collocation_fdist: FrequencyDistribution<Collocation<TrainingTokenKey>>,
 
   /// A frequency distribution of all sentence starters encountered.
-  sentence_starter_fdist: FrequencyDistribution<Rc<TrainingToken>>
+  sentence_starter_fdist: FrequencyDistribution<TrainingTokenKey>
 }
 
 impl<'a> Trainer<'a> {
@@ -178,8 +179,8 @@ impl<'a> Trainer<'a> {
     let start = self.tokens.len();
 
     // Push new tokens that the tokenizer finds from doc into `self.tokens`.
-    for mut t in WordTokenizer::with_parameters(doc, self.tparams) { 
-      self.tokens.push(Rc::new(t));
+    for t in WordTokenizer::with_parameters(doc, self.tparams) { 
+      self.tokens.push(TrainingTokenKey::new(t));
     }
 
     // Acquire the slice from `self.tokens` of tokens only found from this 
@@ -214,7 +215,7 @@ impl<'a> Trainer<'a> {
     // Mark abbreviation types if any exist with the first pass annotation function.
     // Note, this also sets `is_sentence_break` flag.
     for t in slice.iter() {
-      // Rc doesn't provide a mutable interface into a Token by default. 
+      // TrainingTokenKey doesn't provide a mutable interface into a Token by default. 
       // We have to coerce the Token into being mutable. This is safe, since 
       // `annotate_first_pass` only modifies the flags. 
       unsafe {
@@ -305,12 +306,10 @@ fn is_rare_abbrev_type(
     // Check the first condition, and return if it matches
     false
   } else {
-    let key = tok0.typ_without_break_or_period();
+    let key: &str = tok0.typ_without_break_or_period().borrow();
 
     // Count all variations of the token
-    let count = 
-      *trainer.type_fdist.get(key).unwrap_or(&0) + 
-      *trainer.type_fdist.get(&key[..key.len() - 1]).unwrap_or(&0);
+    let count = trainer.type_fdist.get(key) + trainer.type_fdist.get(&key[..key.len() - 1]);
 
     if trainer.data.contains_abbrev(tok0.typ()) || 
        (count as f64) >= trainer.params.abbrev_upper_bound 
@@ -366,8 +365,8 @@ fn is_potential_collocation(
 fn reclassify_iter<'a, 'b, I>(
   trainer: &'b Trainer<'b>,
   iter: I
-) -> PunktReclassifyIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Rc<TrainingToken>> 
+) -> PunktReclassifyIterator< 'b, I> 
+  where I: Iterator<Item = &'a TrainingTokenKey> 
 {
   PunktReclassifyIterator { iter: iter, trainer: trainer }
 }
@@ -375,8 +374,8 @@ fn reclassify_iter<'a, 'b, I>(
 #[inline]
 fn orthography_iter<'a, I>(
   iter: I
-) -> TokenWithContextIterator<'a, I> 
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+) -> TokenWithContextIterator<I> 
+  where I: Iterator<Item = &'a TrainingTokenKey>
 {
   TokenWithContextIterator { iter: iter, ctxt: OrthographyPosition::Internal }
 }
@@ -385,8 +384,8 @@ fn orthography_iter<'a, I>(
 fn potential_sentence_starter_iter<'a, 'b, I>(
   trainer: &'b Trainer,
   iter: I
-) -> PotentialSentenceStartersIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+) -> PotentialSentenceStartersIterator<'b, I> 
+  where I: Iterator<Item = &'a TrainingTokenKey>
 {
   PotentialSentenceStartersIterator { iter: iter, trainer: trainer }
 }
@@ -395,8 +394,8 @@ fn potential_sentence_starter_iter<'a, 'b, I>(
 fn potential_collocation_iter<'a, 'b, I>(
   trainer: &'b Trainer,
   iter: I
-) -> PotentialCollocationsIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>
+) -> PotentialCollocationsIterator<'b, I> 
+  where I: Iterator<Item = &'a Collocation<TrainingTokenKey>>
 {
   PotentialCollocationsIterator { iter: iter, trainer: trainer }
 }
@@ -407,20 +406,19 @@ type ScoredToken<'a> = (&'a TrainingToken, f64);
 /// Iterates over every token from the supplied iterator. Only returns 
 /// the ones that are 'not obviously' abbreviations. Also returns the associated 
 /// score of that token.
-struct PunktReclassifyIterator<'a: 'b, 'b, I>
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+struct PunktReclassifyIterator<'b, I>
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I> Iterator for PunktReclassifyIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+impl<'b, I> Iterator for PunktReclassifyIterator<'b, I> 
+  where I: Iterator<Item = &'b TrainingTokenKey>
 {
-  type Item = ScoredToken<'a>;
+  type Item = ScoredToken<'b>;
 
   #[inline]
-  fn next(&mut self) -> Option<ScoredToken<'a>> {
+  fn next(&mut self) -> Option<ScoredToken<'b>> {
     loop {
       match self.iter.next() {
         Some(t) => {
@@ -449,16 +447,8 @@ impl<'a, 'b, I> Iterator for PunktReclassifyIterator<'a, 'b, I>
             .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
           let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
 
-          let count_with_period = *self
-            .trainer
-            .type_fdist
-            .get(t.typ_with_period())
-            .unwrap_or(&0);
-          let count_without_period = *self
-            .trainer
-            .type_fdist
-            .get(t.typ_without_period())
-            .unwrap_or(&0);
+          let count_with_period = self.trainer.type_fdist.get(t.typ_with_period());
+          let count_without_period = self.trainer.type_fdist.get(t.typ_without_period());
 
           let likelihood = math::dunning_log_likelihood(
             (count_with_period + count_without_period) as f64,
@@ -493,15 +483,14 @@ type TokenWithContext<'a> = (&'a TrainingToken, OrthographicContext);
 
 /// Iterates over every token from the supplied iterator and returns its
 /// decided orthography within the given text. 
-struct TokenWithContextIterator<'a, I> 
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+struct TokenWithContextIterator<I> 
 {
   iter: I,
   ctxt: OrthographyPosition
 }
 
-impl<'a, I> Iterator for TokenWithContextIterator<'a, I>
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+impl<'a, I> Iterator for TokenWithContextIterator<I>
+  where I: Iterator<Item = &'a TrainingTokenKey>
 {
   type Item = TokenWithContext<'a>;
 
@@ -551,20 +540,19 @@ impl<'a, I> Iterator for TokenWithContextIterator<'a, I>
 
 /// Iterates over every potential Collocation (determined by log likelihood).
 /// Also returns the likelihood of the potential collocation.
-struct PotentialCollocationsIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>
+struct PotentialCollocationsIterator<'b, I> 
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Collocation<Rc<TrainingToken>>>
+impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'b, I> 
+  where I: Iterator<Item = &'a Collocation<TrainingTokenKey>>
 {
-  type Item = (&'a Collocation<Rc<TrainingToken>>, f64);
+  type Item = (&'a Collocation<TrainingTokenKey>, f64);
 
   #[inline]
-  fn next(&mut self) -> Option<(&'a Collocation<Rc<TrainingToken>>, f64)> {
+  fn next(&mut self) -> Option<(&'a Collocation<TrainingTokenKey>, f64)> {
     loop {
       match self.iter.next() {
         Some(col) => {
@@ -574,14 +562,14 @@ impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I>
             continue;    
           }
 
-          let count = *self.trainer.collocation_fdist.get(col).unwrap_or(&0);
+          let count = self.trainer.collocation_fdist.get(col);
 
           let left_count = 
-            *self.trainer.type_fdist.get(col.left().typ_without_period()).unwrap_or(&0) +
-            *self.trainer.type_fdist.get(col.left().typ_with_period()).unwrap_or(&0);
+            self.trainer.type_fdist.get(col.left().typ_without_period()) +
+            self.trainer.type_fdist.get(col.left().typ_with_period());
           let right_count = 
-            *self.trainer.type_fdist.get(col.right().typ_without_period()).unwrap_or(&0) + 
-            *self.trainer.type_fdist.get(col.right().typ_with_period()).unwrap_or(&0);
+            self.trainer.type_fdist.get(col.right().typ_without_period()) + 
+            self.trainer.type_fdist.get(col.right().typ_with_period());
 
           if left_count > 1 && 
              right_count > 1 &&
@@ -613,15 +601,14 @@ impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'a, 'b, I>
   }
 }
 
-struct PotentialSentenceStartersIterator<'a, 'b, I>
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+struct PotentialSentenceStartersIterator< 'b, I>
 {
   iter: I,
   trainer: &'b Trainer<'b>
 }
 
-impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'a, 'b, I> 
-  where I: Iterator<Item = &'a Rc<TrainingToken>>
+impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'b, I> 
+  where I: Iterator<Item = &'a TrainingTokenKey>
 {
   type Item = ScoredToken<'a>;
 
@@ -630,11 +617,10 @@ impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'a, 'b, I>
     loop {
       match self.iter.next() {
         Some(tok) => {
-          let ss_count = 
-            *self.trainer.sentence_starter_fdist.get(tok.typ()).unwrap_or(&0);
+          let ss_count = self.trainer.sentence_starter_fdist.get(tok.typ());
           let typ_count = 
-            *self.trainer.type_fdist.get(tok.typ_with_period()).unwrap_or(&0) + 
-            *self.trainer.type_fdist.get(tok.typ_without_period()).unwrap_or(&0);
+            self.trainer.type_fdist.get(tok.typ_with_period()) + 
+            self.trainer.type_fdist.get(tok.typ_without_period());
 
           if typ_count < ss_count { continue; }
 

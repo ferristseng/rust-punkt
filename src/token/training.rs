@@ -1,9 +1,5 @@
-use std::rc::Rc;
-use std::hash::Hash;
-use std::borrow::BorrowFrom;
+use std::hash::{Hash, Hasher};
 use std::fmt::{Debug, Display, Formatter, Result};
-
-use xxhash::XXHasher;
 
 use token::prelude::{
   WordTokenWithPeriod, 
@@ -65,7 +61,9 @@ impl TrainingToken {
     // Also, determine if a sentence has any punctuation, and is not 
     // entirely punctuation.
     for c in slice.chars() { 
-      tok.inner.push(c.to_lowercase());
+      for c0 in c.to_lowercase() {
+        tok.inner.push(c0);
+      }
 
       if c.is_alphabetic() || c == '_' {
         tok.set_is_non_punct(true);
@@ -97,7 +95,7 @@ impl TrainingToken {
 impl WordTokenWithPeriod for TrainingToken {
   #[inline]
   fn token_with_period(&self) -> &str {
-    self.inner.as_slice()
+    &self.inner[..]
   }
 }
 
@@ -124,17 +122,10 @@ impl PartialEq for TrainingToken {
   }
 }
 
-impl Hash<XXHasher> for TrainingToken {
+impl Hash for TrainingToken {
   #[inline]
-  fn hash(&self, state: &mut XXHasher) {
+  fn hash<H>(&self, state: &mut H) where H: Hasher {
     self.typ().hash(state)
-  }
-}
-
-impl BorrowFrom<Rc<TrainingToken>> for str {
-  #[inline]
-  fn borrow_from(owned: &Rc<TrainingToken>) -> &str {
-    owned.typ()
   }
 }
 
