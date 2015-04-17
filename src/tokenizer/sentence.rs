@@ -77,36 +77,41 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
     loop {
       match self.iter.next() {
         Some((slice, tok_start, ws_start, slice_end)) => {
+          println!("{:?}", slice);
+
           let mut prv = None;
           let mut has_sentence_break = false;
 
           // Get word tokens in the slice. If any of them has a sentence break,
           // then set the flag `has_sentence_break`.
           for mut t in WordTokenizer::with_parameters(slice, self.params.wtokp) {
+            // First pass annotation can occur for each token.
+            util::annotate_first_pass(
+              &mut t, 
+              self.data, 
+              self.iter.params.sent_end);
+
+            // Second pass annotation is a bit more finicky...It depends on the previous 
+            // token that was found.
             match prv {
               Some(mut p) => {
-                util::annotate_first_pass(
-                  &mut t, 
-                  self.data, 
-                  self.iter.params.sent_end);
-
                 annotate_second_pass(
                   &mut p, 
                   &mut t,
                   self.data, 
                   self.params.punct);
-
-                if t.is_sentence_break() { 
-                  has_sentence_break = true; 
-                  break; 
-                }
-
-                prv = Some(t);
               }
-              None => {
-                prv = Some(t)
-              }
+              None => ()
             }
+
+            println!("   {:?}", t);
+
+            if t.is_sentence_break() { 
+              has_sentence_break = true; 
+              break; 
+            }
+
+            prv = Some(t);
           }
 
           // If there is a token with a sentence break, it is the end of 
@@ -248,19 +253,25 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
 
     train_on_document(&mut data, &raw[..]);
 
+    println!("{:?}", data.abbrevs_iter().collect::<Vec<&String>>());
+
     for (t, e) in SentenceTokenizer::new(&raw[..], &data).zip(expected.iter()) {
       let s = format!("[{}]", t)
         .replace("\"", "\\\"")
         .replace("\n", "\\n")
         .replace("\r", "");
 
+      println!("{:?}", s);
+
       assert!(
         s == e.trim(),
         "{} - you: [{}] != exp: [{}]", 
         file,
         s,
-        e.trim())
+        e.trim());
     }
+
+    assert!(false);
   }
 }
 

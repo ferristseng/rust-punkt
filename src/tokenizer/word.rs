@@ -57,7 +57,7 @@ impl<'a> WordTokenizer<'a> {
   pub fn with_parameters(
     doc: &'a str,
     params: &'a WordTokenizerParameters
-    ) -> WordTokenizer<'a> {
+  ) -> WordTokenizer<'a> {
     WordTokenizer {
       pos: 0,
       doc: doc,
@@ -140,23 +140,24 @@ impl<'a> Iterator for WordTokenizer<'a> {
         // A capture has already started (meaning a valid character was encountered).
         // This block handles the cases with characters during a capture.
         c if state & CAPTURE_START != 0 => {
+          let eof = self.pos + c.len_utf8() == self.doc.len();
+
           match c {
-            // Valid tokens. This isn't the only definition, but matching here
-            // allows us to skip the subsequent checks, which can be costly. 
-            // If a comma was encountered, reset `CAPTURE_COMMA`, as the comma 
+            // Found some whitespace, a non-word. Return the token.
+            _ if c.is_whitespace() || self.params.non_word.contains(&c) => {
+              return_token!()
+            }
+            // Reached the end of the file. Doesn't matter what we get, just return.
+            _ if eof => {
+              self.pos += c.len_utf8();
+              return_token!()
+            }
+            // Valid tokens. If a comma was encountered, reset `CAPTURE_COMMA`, as the comma 
             // does not signify the ending of the token.
             _ if c.is_alphanumeric() => {
               if state & CAPTURE_COMMA != 0 {
                 state ^= CAPTURE_COMMA;
               }
-            }
-            // Found some whitespace, a non-word, or at the end of the document.
-            // Return the token.
-            _ if c.is_whitespace() ||
-                 self.params.non_word.contains(&c) || 
-                 self.pos + c.len_utf8() >= self.doc.len() => 
-            {
-              return_token!()
             }
             // A comma was found. Set the flag noting that a comma was found. 
             // Do NOT capture past the comma. Simply skip. 
@@ -183,6 +184,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
         }
         // A non-whitespace was encountered. End with just the character.
         c if !c.is_whitespace() => {
+          println!("HERE");
           start = self.pos;
           self.pos += c.len_utf8();
           return_token!()
