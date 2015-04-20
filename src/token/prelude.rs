@@ -1,4 +1,3 @@
-#[cfg(test)] use token::sword::SentenceWordToken;
 #[cfg(test)] use token::training::TrainingToken;
 
 // Flags that can be set. These describe certain properties about the Token.
@@ -474,9 +473,12 @@ impl<T> WordTokenWithFlagsOpsExt<u16> for T
     *self.flags() & IS_INITIAL != 0
   }
 
+  // The NLTK docs note that all numeric tokens are considered be not only
+  // punctuation, because they are converted to `##number##`, which clearly
+  // has alphabetic characters.
   #[inline]
   fn is_non_punct(&self) -> bool {
-    *self.flags() & IS_NON_PUNCT != 0
+    (*self.flags() & IS_NON_PUNCT != 0) || self.is_numeric()
   }
 
   #[inline]
@@ -553,21 +555,4 @@ fn test_training_token_flags() {
   perform_flag_test!(tok, set_is_initial, is_initial);
   perform_flag_test!(tok, set_is_non_punct, is_non_punct);
   perform_flag_test!(tok, set_is_alphabetic, is_alphabetic);
-}
-
-#[test]
-fn test_sentence_word_token_flags() {
-  let mut tok = SentenceWordToken::new("test");
-  
-  tok.set_is_lowercase(false);
-
-  assert_eq!(*tok.flags(), 0);
-
-  perform_flag_test!(tok, set_is_ellipsis, is_ellipsis);
-  perform_flag_test!(tok, set_is_abbrev, is_abbrev);
-  perform_flag_test!(tok, set_has_final_period, has_final_period);
-  perform_flag_test!(tok, set_is_paragraph_start, is_paragraph_start);
-  perform_flag_test!(tok, set_is_newline_start, is_newline_start);
-  perform_flag_test!(tok, set_is_uppercase, is_uppercase);
-  perform_flag_test!(tok, set_is_lowercase, is_lowercase);
 }

@@ -56,7 +56,7 @@ impl<'a> PeriodContextTokenizer<'a> {
 
       match cur {
         // A whitespace is reached before a sentence ending character
-        // that could signal the continuation of a token is.
+        // that could signal the continuation of a token.
         c if c.is_whitespace() => return None,
         // A sentence ending is reached. Check if it could be the beginning
         // of a new token (if there is a space after it, or if the next

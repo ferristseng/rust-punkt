@@ -362,9 +362,10 @@ fn is_potential_collocation(
 ) -> bool {
   (trainer.params.include_all_collocations ||
   (trainer.params.include_abbrev_collocations && tok0.is_abbrev()) ||
-  (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial()))) &&
-  tok0.is_non_punct() && 
-  tok1.is_non_punct()
+  (tok0.is_sentence_break() && 
+    (tok0.is_numeric() || tok0.is_initial())) &&
+    tok0.is_non_punct() && 
+    tok1.is_non_punct())
 }
 
 #[inline]

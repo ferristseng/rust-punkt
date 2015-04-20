@@ -39,5 +39,3 @@ pub mod tokenizer;
 mod util;
 mod ortho;
 mod token;
-
-pub use token::SentenceWordToken;

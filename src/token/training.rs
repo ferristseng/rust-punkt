@@ -131,7 +131,7 @@ impl Hash for TrainingToken {
 
 /// A number can start with a negative sign ('-'), and be followed by digits
 /// or isolated periods, commas, or dashes. 
-/// Note: It's assumed that multi-chars are taken out the input when creating word 
+/// Note: It's assumed that multi-chars are taken out of the input when creating word 
 /// tokens, so a numeric word token SHOULD not have a multi-char within it as
 /// its received. This assumption should be fulfilled by the parser generating 
 /// these word tokens. If it isn't some weird outputs are possible (such as "5.4--5").
@@ -166,14 +166,16 @@ fn is_str_numeric(tok: &str) -> bool {
   digit_found
 }
 
-/// Tests if the token is an initial. 
+/// Tests if the token is an initial. An initial is a 2 character grouping
+/// where the first character is a letter (non-digit, non-symbol), and the 
+/// next is a period.
 #[inline]
 fn is_str_initial(tok: &str) -> bool {
   let mut iter = tok.chars();
 
-  match (iter.next(), iter.next())
+  (match (iter.next(), iter.next())
   {
     (Some(c), Some('.')) if c.is_alphabetic() => true,
     _ => false
-  }
+  }) && iter.next().is_none()
 }

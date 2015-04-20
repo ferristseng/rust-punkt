@@ -1,6 +1,7 @@
 #[cfg(test)] use test::Bencher;
 #[cfg(test)] use trainer::Trainer;
 
+use std::fmt::Debug;
 use std::default::Default;
 
 use phf::Set;
@@ -107,11 +108,6 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
               None => ()
             }
 
-            if t.is_sentence_break() { 
-              has_sentence_break = true; 
-              break; 
-            }
-
             prv = Some(t);
           }
 
@@ -165,7 +161,7 @@ fn orthographic_heuristic<F, T>(
     if tok.is_uppercase() && (ctxt & ORT_LC != 0) && (ctxt & MID_UC == 0) 
     {
       Some(true)
-    } else if tok.is_lowercase() && (ctxt & ORT_UC != 0) || (ctxt & BEG_LC == 0)
+    } else if tok.is_lowercase() && ((ctxt & ORT_UC != 0) || (ctxt & BEG_LC == 0))
     {
       Some(false)
     } else {
@@ -181,7 +177,7 @@ fn annotate_second_pass<F, T>(
   data: &TrainingData,
   punc: &Set<char>
 )
-  where T: WordTokenWithFlagsOps<F> + WordTokenWithFlagsOpsExt<F> + WordTypeToken
+  where T: WordTokenWithFlagsOps<F> + WordTokenWithFlagsOpsExt<F> + WordTypeToken + Debug
 {
   // Known Collocation
   if data.contains_collocation(

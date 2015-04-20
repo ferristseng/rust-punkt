@@ -83,27 +83,27 @@ impl<'a> Iterator for WordTokenizer<'a> {
     let mut start = self.pos;
     let mut is_ellipsis = false;
 
+    // Slices the document, and returns the current token.
+    macro_rules! return_token(
+      () => (
+        {
+          // Rollback if the reason the capture was ended was because 
+          // of a comma.
+          if state & CAPTURE_COMMA != 0 {
+            self.pos -= 1;
+          }
+
+          return Some(TrainingToken::new(
+            &self.doc[start..self.pos],
+            is_ellipsis, 
+            state & PARAGPH_START != 0,
+            state & NEWLINE_START != 0));
+        }
+      )
+    );
+
     while self.pos < self.doc.len() {
       let cur = self.doc.char_at(self.pos);
-
-      // Slices the document, and returns the current token.
-      macro_rules! return_token(
-        () => (
-          {
-            // Rollback if the reason the capture was ended was because 
-            // of a comma.
-            if state & CAPTURE_COMMA != 0 {
-              self.pos -= 1;
-            }
-
-            return Some(TrainingToken::new(
-              &self.doc[start..self.pos],
-              is_ellipsis, 
-              state & PARAGPH_START != 0,
-              state & NEWLINE_START != 0));
-          }
-        )
-      );
 
       // Periods or dashes are the start of multi-chars. A multi-char
       // is defined as an ellipsis or hyphen (multiple-dashes). If there 
@@ -122,6 +122,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
               {
                 return_token!()
               }
+
               start = self.pos;
               is_ellipsis = s.ends_with(".");
               
@@ -140,16 +141,9 @@ impl<'a> Iterator for WordTokenizer<'a> {
         // A capture has already started (meaning a valid character was encountered).
         // This block handles the cases with characters during a capture.
         c if state & CAPTURE_START != 0 => {
-          let eof = self.pos + c.len_utf8() == self.doc.len();
-
           match c {
             // Found some whitespace, a non-word. Return the token.
             _ if c.is_whitespace() || self.params.non_word.contains(&c) => {
-              return_token!()
-            }
-            // Reached the end of the file. Doesn't matter what we get, just return.
-            _ if eof => {
-              self.pos += c.len_utf8();
               return_token!()
             }
             // Valid tokens. If a comma was encountered, reset `CAPTURE_COMMA`, as the comma 
@@ -180,7 +174,7 @@ impl<'a> Iterator for WordTokenizer<'a> {
              !self.params.non_pref.contains(&c) => 
         {
           start = self.pos;
-          state |= CAPTURE_START
+          state |= CAPTURE_START;
         }
         // A non-whitespace was encountered. End with just the character.
         c if !c.is_whitespace() => {
@@ -202,6 +196,10 @@ impl<'a> Iterator for WordTokenizer<'a> {
       }
 
       self.pos += cur.len_utf8();
+    }
+
+    if state & CAPTURE_START != 0 {
+      return_token!()
     }
 
     None

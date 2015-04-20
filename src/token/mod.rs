@@ -1,6 +1,5 @@
 /// Representation of a string token needed by the Punkt algorithm. 
 
-pub use token::sword::SentenceWordToken;
 pub use token::training::TrainingToken;
 
 macro_rules! impl_flags(
@@ -21,6 +20,5 @@ macro_rules! impl_flags(
   )
 );
 
-mod sword;
 mod training;
 pub mod prelude;
