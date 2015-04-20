@@ -96,8 +96,8 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
             match prv {
               Some(mut p) => {
                 annotate_second_pass(
-                  &mut p, 
-                  &mut t,
+                  &mut t, 
+                  &mut p,
                   self.data, 
                   self.params.punct);
               }
@@ -161,13 +161,12 @@ fn orthographic_heuristic<F, T>(
       .get_orthographic_context(tok.typ_without_break_or_period())
       .unwrap_or(&0); 
 
-    if tok.is_uppercase() && 
-       (ctxt & ORT_LC != 0) && 
-       (ctxt & MID_UC == 0) 
+    println!("ORTHO: {:?}", ctxt);
+
+    if tok.is_uppercase() && (ctxt & ORT_LC != 0) && (ctxt & MID_UC == 0) 
     {
       Some(true)
-    } else if tok.is_lowercase() &&  
-      ((ctxt & ORT_UC != 0) || (ctxt & BEG_LC == 0))
+    } else if tok.is_lowercase() && (ctxt & ORT_UC != 0) || (ctxt & BEG_LC == 0)
     {
       Some(false)
     } else {
@@ -203,7 +202,7 @@ fn annotate_second_pass<F, T>(
 
     // Abbreviation with sentence starter
     if cur.is_uppercase() && 
-      data.contains_sentence_starter(cur.typ_without_break_or_period())
+       data.contains_sentence_starter(cur.typ_without_break_or_period())
     {
       prv.set_is_sentence_break(true); 
       return;
@@ -226,9 +225,9 @@ fn annotate_second_pass<F, T>(
 
     // Initial with special orthographic heuristic
     if ortho_dec.is_none() && 
-      prv.is_initial() && 
-      cur.is_uppercase() &&
-      ctxt & ORT_LC == 0
+       prv.is_initial() && 
+       cur.is_uppercase() &&
+       ctxt & ORT_LC == 0
     {
       prv.set_is_sentence_break(false);
       prv.set_is_abbrev(true);
@@ -254,6 +253,7 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
     train_on_document(&mut data, &raw[..]);
 
     println!("{:?}", data.abbrevs_iter().collect::<Vec<&String>>());
+    println!("{:?}", data.sentence_starters_iter().collect::<Vec<&String>>());
 
     for (t, e) in SentenceTokenizer::new(&raw[..], &data).zip(expected.iter()) {
       let s = format!("[{}]", t)
@@ -270,8 +270,6 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
         s,
         e.trim());
     }
-
-    assert!(false);
   }
 }
 

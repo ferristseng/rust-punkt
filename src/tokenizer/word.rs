@@ -184,7 +184,6 @@ impl<'a> Iterator for WordTokenizer<'a> {
         }
         // A non-whitespace was encountered. End with just the character.
         c if !c.is_whitespace() => {
-          println!("HERE");
           start = self.pos;
           self.pos += c.len_utf8();
           return_token!()

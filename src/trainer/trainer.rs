@@ -217,7 +217,8 @@ impl<'a> Trainer<'a> {
     for t in slice.iter() {
       // TrainingTokenKey doesn't provide a mutable interface into a Token by default. 
       // We have to coerce the Token into being mutable. This is safe, since 
-      // `annotate_first_pass` only modifies the flags. 
+      // `annotate_first_pass` only modifies the flags. Nothing is being added or removed
+      // from the list of tokens.
       unsafe {
         util::annotate_first_pass(
           &mut *(t.deref() as *const TrainingToken as *mut TrainingToken),
@@ -262,6 +263,11 @@ impl<'a> Trainer<'a> {
   /// Afterwards, the trainer should be dropped (suggested), although finalizing 
   /// could theoretically could occur between each training stage. 
   pub fn finalize(&mut self) {
+    // This method does a lot of `unsafe` things that are actually safe. The issue 
+    // is it requires borrow `self` mutably to create the iterators, and to 
+    // modify the internal data object. Since these two things are completely 
+    // separate, these `unsafe` blocks should be safe.
+
     self.data.clear_sentence_starters();
 
     for (tok, _) 

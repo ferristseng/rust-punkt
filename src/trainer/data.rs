@@ -159,18 +159,26 @@ impl<H = SipHasher> TrainingData<H> where H: Hasher + Default {
     }
   }
 
-  /// Insert a token and its orthographic context  if it doesn't already exist.
+  /// Insert a token and its orthographic context if it doesn't already exist, 
+  /// and updates it if it does already exist (logical OR). Returns true if 
+  /// the token is inserted, otherwise false.
   #[inline]
   pub fn insert_orthographic_context(
     &mut self, 
     tok: &str, 
     ctxt: OrthographicContext
   ) -> bool {
-    if !self.orthographic_context().contains_key(tok) {
-      self.mut_orthographic_context().insert(tok.to_string(), ctxt).is_none()
-    } else {
-      false
+    // Check if the orthographic context already exists.. If it does, then update.
+    match self.mut_orthographic_context().get_mut(tok) {
+      Some(c) => {
+        *c |= ctxt;
+        return false;
+      }
+      None => ()
     }
+
+    self.mut_orthographic_context().insert(tok.to_string(), ctxt);
+    true
   }
 
   /// Clear all abbreviations.
