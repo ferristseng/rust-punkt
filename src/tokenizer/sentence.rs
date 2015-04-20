@@ -77,8 +77,6 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
     loop {
       match self.iter.next() {
         Some((slice, tok_start, ws_start, slice_end)) => {
-          println!("{:?}", slice);
-
           let mut prv = None;
           let mut has_sentence_break = false;
 
@@ -100,11 +98,14 @@ impl<'a> Iterator for SentenceTokenizer<'a> {
                   &mut p,
                   self.data, 
                   self.params.punct);
+
+                if p.is_sentence_break() {
+                  has_sentence_break = true;
+                  break;
+                }
               }
               None => ()
             }
-
-            println!("   {:?}", t);
 
             if t.is_sentence_break() { 
               has_sentence_break = true; 
@@ -160,8 +161,6 @@ fn orthographic_heuristic<F, T>(
     let ctxt = *data
       .get_orthographic_context(tok.typ_without_break_or_period())
       .unwrap_or(&0); 
-
-    println!("ORTHO: {:?}", ctxt);
 
     if tok.is_uppercase() && (ctxt & ORT_LC != 0) && (ctxt & MID_UC == 0) 
     {
@@ -252,16 +251,11 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
 
     train_on_document(&mut data, &raw[..]);
 
-    println!("{:?}", data.abbrevs_iter().collect::<Vec<&String>>());
-    println!("{:?}", data.sentence_starters_iter().collect::<Vec<&String>>());
-
     for (t, e) in SentenceTokenizer::new(&raw[..], &data).zip(expected.iter()) {
       let s = format!("[{}]", t)
         .replace("\"", "\\\"")
         .replace("\n", "\\n")
         .replace("\r", "");
-
-      println!("{:?}", s);
 
       assert!(
         s == e.trim(),
