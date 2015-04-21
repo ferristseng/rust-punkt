@@ -138,7 +138,7 @@ impl Hash for TrainingToken {
 #[inline]
 fn is_str_numeric(tok: &str) -> bool {
   let mut digit_found = false;
-  let mut pos = 0us;
+  let mut pos = 0usize;
 
   for c in tok.chars() {
     match c {

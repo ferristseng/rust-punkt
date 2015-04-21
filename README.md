@@ -1,6 +1,7 @@
 # Punkt
 
 [![Build Status](https://travis-ci.org/ferristseng/rust-punkt.svg)](https://travis-ci.org/ferristseng/rust-punkt)
+[![](http://meritbadge.herokuapp.com/punkt)](https://crates.io/crates/punkt)
 
 Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence tokenization.
 Includes a word tokenizer that tokenizes words based on regexes defined in Python's
