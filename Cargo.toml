@@ -1,6 +1,6 @@
 [package]
 name = "punkt"
-version = "0.1.1"
+version = "0.1.2"
 authors = ["Ferris Tseng <ferristseng@fastmail.fm>"]
 keywords = ["punkt", "sentence", "token", "tokenizer"]
 license = "MIT"
@@ -10,9 +10,6 @@ readme = "README.md"
 
 [lib]
 name = "punkt"
-
-# https://github.com/rust-lang/cargo/issues/1512
-doctest = false 
 
 [dependencies]
 num = "0.1"

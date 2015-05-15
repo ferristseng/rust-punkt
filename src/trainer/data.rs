@@ -429,7 +429,7 @@ impl FromStr for TrainingData {
 /// generate next items from internal collocation collection in TrainingData.
 pub struct CollocationsIterator<'a, H: 'a> where H: Hasher + Default {
   iter: HashMapIter<'a, String, HashSet<String, DefaultState<H>>>,
-  cur: Option<(&'a String, HashSetIter<'a String>)>
+  cur: Option<(&'a String, HashSetIter<'a, String>)>
 }
 
 impl<'a, H: 'a> Iterator for CollocationsIterator<'a, H> where H: Hasher + Default {
