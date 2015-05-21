@@ -2,6 +2,9 @@ use std::default::Default;
 
 use phf::Set;
 
+use prelude::{DefinesNonWord}
+
+
 static DEFAULT: PeriodContextTokenizerParameters = PeriodContextTokenizerParameters {
   non_word: &phf_set![
     '?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'', '(', '{', '['
@@ -199,11 +202,6 @@ impl<'a> Iterator for PeriodContextTokenizer<'a> {
     }
 
     None
-  }
-
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    (self.doc.len() / 5, Some(self.doc.len() / 3))
   }
 }
 

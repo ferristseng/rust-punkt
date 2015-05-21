@@ -158,10 +158,10 @@ fn orthographic_heuristic<F, T>(
       .get_orthographic_context(tok.typ_without_break_or_period())
       .unwrap_or(&0); 
 
-    if tok.is_uppercase() && (ctxt & ORT_LC != 0) && (ctxt & MID_UC == 0) 
-    {
+    if tok.is_uppercase() && (ctxt & ORT_LC != 0) && (ctxt & MID_UC == 0) {
       Some(true)
-    } else if tok.is_lowercase() && ((ctxt & ORT_UC != 0) || (ctxt & BEG_LC == 0))
+    } else if tok.is_lowercase() && 
+      ((ctxt & ORT_UC != 0) || (ctxt & BEG_LC == 0))
     {
       Some(false)
     } else {

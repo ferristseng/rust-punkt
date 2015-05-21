@@ -1,21 +1,8 @@
 #[cfg(test)] use token::training::TrainingToken;
 
-// Flags that can be set. These describe certain properties about the Token.
-// These 6 flags only use the lower 8 bits.
-const HAS_FINAL_PERIOD  : u16 = 0b0000000000000001;
-const IS_ELLIPSIS       : u16 = 0b0000000000000010;
-const IS_ABBREV         : u16 = 0b0000000000000100;
-const IS_SENTENCE_BREAK : u16 = 0b0000000000001000;
-const IS_PARAGRAPH_START: u16 = 0b0000000000010000;
-const IS_NEWLINE_START  : u16 = 0b0000000000100000;
-const IS_UPPERCASE      : u16 = 0b0000000001000000;
-const IS_LOWERCASE      : u16 = 0b0000000010000000;
 
-// These flags only use the upper 8 bits.
-const IS_INITIAL        : u16 = 0b1000000000000000;
-const IS_NUMERIC        : u16 = 0b0100000000000000;
-const IS_NON_PUNCT      : u16 = 0b0010000000000000;
-const IS_ALPHABETIC     : u16 = 0b0000010000000000;
+
+
 
 /// Possible cases a letter can be in. OR (|) can be applied to these with 
 /// a OrthographyPosition to get a corrosponding OrthographicContext from 
@@ -51,9 +38,7 @@ pub trait WordToken {
 
   /// The length of the token.
   #[inline]
-  fn len(&self) -> usize {
-    self.token().len()
-  }
+  fn len(&self) -> usize { self.token().len() }
 }
 
 impl<F, T> WordToken for T
@@ -187,7 +172,6 @@ pub trait WordTokenWithFlagsOps<T>: WordTokenWithFlags<Flags = T> {
   #[allow(missing_docs)] fn is_uppercase(&self) -> bool;
   #[allow(missing_docs)] fn is_lowercase(&self) -> bool;
 
- 
   #[allow(missing_docs)]
   fn first_case(&self) -> LetterCase {
     if self.is_lowercase() {

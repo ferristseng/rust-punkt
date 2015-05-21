@@ -13,9 +13,7 @@ name = "punkt"
 
 [dependencies]
 num = "0.1"
-log = "0.3.1"
 phf = "0.7"
-phf_shared = "0.7"
 phf_macros = "0.7"
-rust-freqdist = "0.1"
-rustc-serialize = "0.3.12"
+string_cache = "0.1"
+rustc-serialize = "0.3"

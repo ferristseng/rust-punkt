@@ -3,6 +3,7 @@ use token::prelude::{WordTokenWithoutPeriod, WordTokenWithFlagsOps};
 
 use phf::Set;
 
+
 /// Peforms a first pass annotation on a Token.
 pub fn annotate_first_pass<F, T: WordTokenWithoutPeriod + WordTokenWithFlagsOps<F>>(
   tok: &mut T,
