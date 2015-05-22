@@ -1,5 +1,3 @@
-#[cfg(test)] use test::Bencher;
-
 use std::cmp::min;
 use std::ops::Deref;
 use std::default::Default;
@@ -7,15 +5,7 @@ use collections::borrow::Borrow;
 
 use phf::Set;
 use num::Float;
-use freqdist::{Distribution, FrequencyDistribution};
 
-use token::TrainingToken;
-use token::prelude::{
-  WordToken,
-  WordTypeToken,
-  WordTokenWithFlagsOps,
-  WordTokenWithFlagsOpsExt,
-};
 
 use util;
 use trainer::math;
@@ -25,74 +15,6 @@ use trainer::data::TrainingData;
 use tokenizer::{WordTokenizer, WordTokenizerParameters};
 use ortho::{BEG_UC, MID_UC, OrthographyPosition, OrthographicContext, ORTHO_MAP};
 
-/// Default parameters for a Trainer. These values are taken mostly from 
-/// NLTK, except `internal_punctuation`, which adds some unicode definitions for 
-/// punctuation that can be contained within sentences.
-static DEFAULTS: TrainerParameters = TrainerParameters {
-  sent_end: &phf_set!['.', '!', '?'],
-  internal_punctuation: &phf_set![',', ':', ';', '\u{2014}'],
-  abbrev_lower_bound: 0.3,
-  abbrev_upper_bound: 5f64,
-  ignore_abbrev_penalty: false,
-  collocation_lower_bound: 7.88,
-  sentence_starter_lower_bound: 30f64,
-  include_all_collocations: false,
-  include_abbrev_collocations: false,
-  collocation_frequency_lower_bound: 1f64
-};
-
-/// Parameters for the Trainer. These are taken directly from NLTK.
-#[derive(Copy, Clone)]
-pub struct TrainerParameters {
-  /// Characters that signify the ending of a sentence.
-  pub sent_end: &'static Set<char>,
-
-  /// Characters that are considered internal punctuation of a sentence.
-  pub internal_punctuation: &'static Set<char>,
-
-  /// Lower bound score for a token to be considered an abbreviation. 
-  pub abbrev_lower_bound: f64,
-
-  /// Upper bound score for a token to be considered an abbreviation.
-  pub abbrev_upper_bound: f64,
-
-  /// Disables the abbreviation penalty which exponentially penalizes occurances 
-  /// of words without a trailing period.
-  pub ignore_abbrev_penalty: bool,
-
-  /// Lower bound score for two tokens to be considered a collocation
-  pub collocation_lower_bound: f64,
-
-  /// Lower bound score for a token to be considered a sentence starter.
-  pub sentence_starter_lower_bound: f64,
-
-  /// Include all pairs where the first token ends with a period.
-  pub include_all_collocations: bool,
-
-  /// Include all pairs where the first is an abbreviation. Overridden by 
-  /// `include_all_collocations`.
-  pub include_abbrev_collocations: bool,
-
-  /// Minimum number of times a bigram appears in order to be considered a 
-  /// collocation.
-  pub collocation_frequency_lower_bound: f64
-}
-
-impl Default for TrainerParameters {
-  /// Creates TrainerParameters based off of Kiss, Tibor, and Strunk's Paper.
-  #[inline]
-  fn default() -> TrainerParameters {
-    DEFAULTS.clone()
-  }
-}
-
-impl Default for &'static TrainerParameters {
-  /// Borrowed pointer to static default.
-  #[inline]
-  fn default() -> &'static TrainerParameters {
-    &DEFAULTS
-  }
-}
 
 /// Trainer to compile data about frequent sentence staters, collocations, 
 /// and potential abbreviations.
@@ -101,65 +23,33 @@ impl Default for &'static TrainerParameters {
 /// to compile the trained data. You can use and modify preexisting data, if 
 /// you instantiate with the `with_data` constructor.
 pub struct Trainer<'a> {
-  /// Number of periods counted in tokens encountered.
   period_token_count: usize,
-
-  /// Number of sentence breaks in tokens encountered.
   sentence_break_count: usize,
-
-  /// The training data. This data object is modified as new documents 
-  /// are trained on.
   data: &'a mut TrainingData,
-
-  /// Trainer parameters.
-  params: &'a TrainerParameters,
-
-  /// Tokenizer parameters.
-  tparams: &'a WordTokenizerParameters,
-
-  /// A list of all tokens encountered. Other fields reference Tokens
-  /// from here.
   tokens: Vec<TrainingTokenKey>,
-
-  /// A frequency distribution of all Tokens encountered.
   type_fdist: FrequencyDistribution<TrainingTokenKey>,
-
-  /// A frequency distribution of all collocations encountered.
   collocation_fdist: FrequencyDistribution<Collocation<TrainingTokenKey>>,
-
-  /// A frequency distribution of all sentence starters encountered.
   sentence_starter_fdist: FrequencyDistribution<TrainingTokenKey>
+  params: PhantomData
 }
 
 impl<'a> Trainer<'a> {
   /// Creates a trainer from borrowed `TrainingData`. The trainer mutably borrows 
   /// the training data for its lifetime, and inorder to reacquire the borrow, the 
   /// Training step must be wrapped in a block.
-  #[inline]
-  pub fn new(data: &'a mut TrainingData) -> Trainer<'a> {
-    Trainer::with_parameters(data, Default::default(), Default::default())
-  }
-
-  /// Creates a trainer with specified parameters. By default, the parameters used are
-  /// the ones that were explained in the original paper.
-  #[inline]
-  pub fn with_parameters(
-    data: &'a mut TrainingData, 
-    params: &'a TrainerParameters,
-    tparams: &'a WordTokenizerParameters,
-  ) -> Trainer<'a> {
+  #[inline(always)] pub fn new(data: &'a mut TrainingData) -> Trainer<'a> {
     Trainer {
       period_token_count: 0,
       sentence_break_count: 0,
       data: data,
-      params: params,
-      tparams: tparams,
       tokens: Vec::new(),
       type_fdist: FrequencyDistribution::new(),
       collocation_fdist: FrequencyDistribution::new(),
-      sentence_starter_fdist: FrequencyDistribution::new()
+      sentence_starter_fdist: FrequencyDistribution::new(),
+      params: PhantomData
     }
   }
+
 
   /// This isn't entirely safe, so should be used with extreme caution. It
   /// returns a mutable reference to data on the Trainer. Mostly this is 
@@ -478,11 +368,6 @@ impl<'b, I> Iterator for PunktReclassifyIterator<'b, I>
       }
     }
   }
-
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    self.iter.size_hint()
-  }
 }
 
 /// Token annotated with its orthographic context.
@@ -537,11 +422,6 @@ impl<'a, I> Iterator for TokenWithContextIterator<I>
       }
       None => None
     }
-  }
-  
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    self.iter.size_hint()
   }
 }
 
@@ -601,11 +481,6 @@ impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'b, I>
       }
     }
   }
-
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    self.iter.size_hint()
-  }
 }
 
 struct PotentialSentenceStartersIterator< 'b, I>
@@ -648,11 +523,6 @@ impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'b, I>
         None => return None
       }
     }
-  }
-
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    self.iter.size_hint()
   }
 }
 
@@ -699,17 +569,12 @@ impl<'a, T: 'a, I> Iterator for ConsecutiveTokenIterator<'a, T, I>
       }
     }
   }
-
-  #[inline]
-  fn size_hint(&self) -> (usize, Option<usize>) {
-    self.iter.size_hint()
-  }
 }
 
 macro_rules! bench_trainer(
   ($name:ident, $doc:expr) => (
     #[bench]
-    fn $name(b: &mut Bencher) {
+    fn $name(b: &mut ::test::Bencher) {
       b.iter(|| {
         let mut data = Default::default();
         let mut trainer = Trainer::new(&mut data);

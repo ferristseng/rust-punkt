@@ -75,6 +75,14 @@ impl Token {
     tok
   }
 
+  #[inline] pub fn typ(&self) -> String {
+    if self.is_numeric() {
+      "##number##".to_string()
+    } else {
+      self.chars().flat_map(|c| c.to_lowercase()).collect()
+    }
+  }
+
   #[inline(always)] pub fn is_uppercase(&self) -> bool { 
     self.flags & IS_UPPERCASE != 0 
   }

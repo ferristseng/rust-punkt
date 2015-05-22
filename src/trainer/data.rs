@@ -25,45 +25,14 @@ use rustc_serialize::json::Json;
 /// let ger_data = TrainingData::german();
 /// ``` 
 #[derive(Debug)]
-pub struct TrainingData<H = SipHasher> where H: Hasher + Default {
-  abbrev_types: HashSet<String, DefaultState<H>>,
-  collocations: HashMap<String, HashSet<String, DefaultState<H>>, DefaultState<H>>,
-  sentence_starters: HashSet<String, DefaultState<H>>,
-  orthographic_context: HashMap<String, OrthographicContext, DefaultState<H>>
+pub struct TrainingData {
+  abbrevs: HashSet<Atom>,
+  collocations: HashMap<Atom, HashSet<Atom>>,
+  sentence_starters: HashSet<Atom>,
+  orthographic_context: HashMap<Atom, OrthographicContext>
 }
 
-// Macro for generating functions to load precompiled data.
-macro_rules! preloaded_data(
-  ($lang:ident, $file:expr) => (
-    impl TrainingData {
-      /// Default data for $lang.
-      #[inline]
-      pub fn $lang() -> TrainingData {
-        FromStr::from_str(include_str!($file)).unwrap()
-      }
-    }
-  )
-);
-
-preloaded_data!(czech, "data/czech.json");
-preloaded_data!(danish, "data/danish.json");
-preloaded_data!(dutch, "data/dutch.json");
-preloaded_data!(english, "data/english.json");
-preloaded_data!(estonian, "data/estonian.json");
-preloaded_data!(finnish, "data/finnish.json");
-preloaded_data!(french, "data/french.json");
-preloaded_data!(german, "data/german.json");
-preloaded_data!(greek, "data/greek.json");
-preloaded_data!(italian, "data/italian.json");
-preloaded_data!(norwegian, "data/norwegian.json");
-preloaded_data!(polish, "data/polish.json");
-preloaded_data!(portuguese, "data/portuguese.json");
-preloaded_data!(slovene, "data/slovene.json");
-preloaded_data!(spanish, "data/spanish.json");
-preloaded_data!(swedish, "data/swedish.json");
-preloaded_data!(turkish, "data/turkish.json");
-
-impl<H = SipHasher> TrainingData<H> where H: Hasher + Default {
+impl TrainingData {
   /// Returns the inner representation of compiled abbreviation types.
   #[inline]
   fn abbrev_types(&self) -> &HashSet<String, DefaultState<H>> {
@@ -353,6 +322,41 @@ impl Default for TrainingData {
   }
 }
 
+
+/*
+// Macro for generating functions to load precompiled data.
+macro_rules! preloaded_data(
+  ($lang:ident, $file:expr) => (
+    impl TrainingData {
+      /// Default data for $lang.
+      #[inline]
+      pub fn $lang() -> TrainingData {
+        FromStr::from_str(include_str!($file)).unwrap()
+      }
+    }
+  )
+);
+
+preloaded_data!(czech, "data/czech.json");
+preloaded_data!(danish, "data/danish.json");
+preloaded_data!(dutch, "data/dutch.json");
+preloaded_data!(english, "data/english.json");
+preloaded_data!(estonian, "data/estonian.json");
+preloaded_data!(finnish, "data/finnish.json");
+preloaded_data!(french, "data/french.json");
+preloaded_data!(german, "data/german.json");
+preloaded_data!(greek, "data/greek.json");
+preloaded_data!(italian, "data/italian.json");
+preloaded_data!(norwegian, "data/norwegian.json");
+preloaded_data!(polish, "data/polish.json");
+preloaded_data!(portuguese, "data/portuguese.json");
+preloaded_data!(slovene, "data/slovene.json");
+preloaded_data!(spanish, "data/spanish.json");
+preloaded_data!(swedish, "data/swedish.json");
+preloaded_data!(turkish, "data/turkish.json");
+
+
+
 impl FromStr for TrainingData {
   type Err = String; 
 
@@ -477,3 +481,4 @@ fn test_data_load_from_json_test() {
   assert!(data.sentence_starters().len() > 0);
   assert!(data.collocations().len() > 0);
 }
+*/
