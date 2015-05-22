@@ -26,10 +26,10 @@ use rustc_serialize::json::Json;
 /// ``` 
 #[derive(Debug)]
 pub struct TrainingData {
-  abbrevs: HashSet<Atom>,
-  collocations: HashMap<Atom, HashSet<Atom>>,
-  sentence_starters: HashSet<Atom>,
-  orthographic_context: HashMap<Atom, OrthographicContext>
+  abbrevs: HashSet<Token>,
+  collocations: HashMap<Token, HashSet<Token>>,
+  sentence_starters: HashSet<Token>,
+  orthographic_context: HashMap<Token, OrthographicContext>
 }
 
 impl TrainingData {

@@ -25,6 +25,7 @@ const IS_NON_PUNCT      : u16 = 0b0010000000000000;
 const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 
 
+#[derive(Clone)]
 pub struct Token {
   inner: Atom,
   flags: u16 
@@ -262,13 +263,6 @@ impl Hash for Token {
 }
 
 /*
-impl WordTokenWithPeriod for TrainingToken {
-  #[inline]
-  fn token_with_period(&self) -> &str {
-    &self.inner[..]
-  }
-}
-
 impl Display for TrainingToken {
   #[inline]
   fn fmt(&self, fmt: &mut Formatter) -> Result {
@@ -280,20 +274,6 @@ impl Debug for TrainingToken {
   #[inline]
   fn fmt(&self, fmt: &mut Formatter) -> Result {
     write!(fmt, "{}", self.typ()) 
-  }
-}
-
-impl PartialEq for TrainingToken {
-  #[inline]
-  fn eq(&self, other: &TrainingToken) -> bool {
-    self.typ() == other.typ()
-  }
-}
-
-impl Hash for TrainingToken {
-  #[inline]
-  fn hash<H>(&self, state: &mut H) where H: Hasher {
-    self.typ().hash(state)
   }
 }
 */

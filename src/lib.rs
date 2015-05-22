@@ -28,7 +28,7 @@ extern crate string_cache;
 
 /// Trainer to train a `SentenceTokenizer`. This module also contains 
 /// default data to use, that was trained for a variety of different languages.
-pub mod trainer;
+//pub mod trainer;
 
 //mod util;
 mod token;
