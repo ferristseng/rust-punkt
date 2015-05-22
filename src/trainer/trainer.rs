@@ -16,13 +16,7 @@ use tokenizer::{WordTokenizer, WordTokenizerParameters};
 use ortho::{BEG_UC, MID_UC, OrthographyPosition, OrthographicContext, ORTHO_MAP};
 
 
-/// Trainer to compile data about frequent sentence staters, collocations, 
-/// and potential abbreviations.
-///
-/// After you've trained on any number of documents, you can call `finalize` 
-/// to compile the trained data. You can use and modify preexisting data, if 
-/// you instantiate with the `with_data` constructor.
-pub struct Trainer<'a> {
+pub struct Trainer<P> {
   period_token_count: usize,
   sentence_break_count: usize,
   data: &'a mut TrainingData,
@@ -30,24 +24,26 @@ pub struct Trainer<'a> {
   type_fdist: FrequencyDistribution<TrainingTokenKey>,
   collocation_fdist: FrequencyDistribution<Collocation<TrainingTokenKey>>,
   sentence_starter_fdist: FrequencyDistribution<TrainingTokenKey>
-  params: PhantomData
+  params: PhantomData<P>
 }
 
-impl<'a> Trainer<'a> {
-  /// Creates a trainer from borrowed `TrainingData`. The trainer mutably borrows 
-  /// the training data for its lifetime, and inorder to reacquire the borrow, the 
-  /// Training step must be wrapped in a block.
-  #[inline(always)] pub fn new(data: &'a mut TrainingData) -> Trainer<'a> {
-    Trainer {
-      period_token_count: 0,
-      sentence_break_count: 0,
-      data: data,
-      tokens: Vec::new(),
-      type_fdist: FrequencyDistribution::new(),
-      collocation_fdist: FrequencyDistribution::new(),
-      sentence_starter_fdist: FrequencyDistribution::new(),
-      params: PhantomData
-    }
+struct FrequencyCount {
+  with_period: usize 
+  total: usize
+}
+
+impl FrequencyCount {
+  fn with_period(&self) -> self.
+}
+
+type FrequencyCounter()
+
+impl<P> Trainer<P> 
+  where P : TrainerParameters + DefinesNonPrefixCharacters + DefinesNonWordCharacters 
+{
+  /// Creates a new Trainer.
+  #[inline(always)] pub fn new() -> Trainer {
+    Trainer { params: PhantomData }
   }
 
 
@@ -62,7 +58,7 @@ impl<'a> Trainer<'a> {
   }
 
   /// Train on a document. Does tokenization using a WordTokenizer.
-  pub fn train(&mut self, doc: &str) {
+  pub fn train(self, doc: &str, &mut TrainingData) {
     // `self.tokens` hold all the tokens that were encountered during 
     // training. In order to get only the ones for the inputted document, 
     // the current length needs to be saved.
@@ -193,6 +189,7 @@ impl<'a> Trainer<'a> {
   }
 }
 
+/*
 fn is_rare_abbrev_type(
   trainer: &Trainer,
   tok0: &TrainingToken, 
@@ -287,7 +284,7 @@ fn potential_sentence_starter_iter<'a, 'b, I>(
   PotentialSentenceStartersIterator { iter: iter, trainer: trainer }
 }
 
-#[inline]
+#[inline()]
 fn potential_collocation_iter<'a, 'b, I>(
   trainer: &'b Trainer,
   iter: I
@@ -601,3 +598,4 @@ bench_trainer!(
 bench_trainer!(
   bench_trainer_very_long,
   include_str!("../../test/raw/pride-and-prejudice.txt"));
+*/

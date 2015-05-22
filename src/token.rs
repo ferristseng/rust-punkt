@@ -1,8 +1,5 @@
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
-use std::fmt::{Debug, Display, Formatter, Result};
-
-use string_cache::atom::Atom;
 
 use prelude::CaseInsensitiveEq;
 
@@ -26,19 +23,19 @@ const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 
 
 #[derive(Clone)]
-pub struct Token {
-  inner: Atom,
+pub struct Token<'a> {
+  inner: &'a str,
   flags: u16 
 }
 
-impl Token {
-  pub fn new(slice: &str, is_el: bool, is_pg: bool, is_nl: bool) -> Token {
+impl<'a> Token<'a> {
+  pub fn new(slice: &'a str, is_el: bool, is_pg: bool, is_nl: bool) -> Token {
     debug_assert!(slice.len() > 0);
 
     let first = slice.char_at(0);
     let mut has_punct = false;
     let mut tok = Token {
-      inner: Atom::from_slice(slice),
+      inner: slice,
       flags: 0x00
     };
 
@@ -76,11 +73,11 @@ impl Token {
     tok
   }
 
-  #[inline] pub fn typ(&self) -> String {
+  #[inline] pub fn tok(&self) -> &str {
     if self.is_numeric() {
-      "##number##".to_string()
+      "##number##"
     } else {
-      self.chars().flat_map(|c| c.to_lowercase()).collect()
+      self.inner
     }
   }
 
@@ -232,51 +229,35 @@ impl Token {
   }
 }
 
-impl Deref for Token {
+impl<'a> Deref for Token<'a> {
   type Target = str;
 
-  #[inline(always)] fn deref(&self) -> &str { self.inner.as_slice() }
+  #[inline(always)] fn deref(&self) -> &str { self.inner }
 }
 
-impl PartialEq for Token {
+impl<'a> PartialEq for Token<'a> {
   #[inline(always)] fn eq(&self, other: &Token) -> bool {
     self.case_insensitive_eq(other)
   }
 }
 
-impl Hash for Token {
+impl<'a> Hash for Token<'a> {
   fn hash<H>(&self, state: &mut H) where H : Hasher {
     if self.is_numeric() {
       "##number##".hash(state);
     } else {
       if self.has_final_period() {
         for c in self[..self.len() - 1].chars().flat_map(|c| c.to_lowercase()) {
-          state.write_u8(c as u8);
+          state.write_u32(c as u32);
         }
       } else {
         for c in self.chars().flat_map(|c| c.to_lowercase()) {
-          state.write_u8(c as u8);
+          state.write_u32(c as u32);
         }
       };
     }
   }
 }
-
-/*
-impl Display for TrainingToken {
-  #[inline]
-  fn fmt(&self, fmt: &mut Formatter) -> Result {
-    Debug::fmt(&self, fmt)
-  }
-}
-
-impl Debug for TrainingToken {
-  #[inline]
-  fn fmt(&self, fmt: &mut Formatter) -> Result {
-    write!(fmt, "{}", self.typ()) 
-  }
-}
-*/
 
 
 /// A number can start with a negative sign ('-'), and be followed by digits
@@ -361,6 +342,7 @@ impl Debug for TrainingToken {
   perform_flag_test!(tok, set_is_non_punct, is_non_punct);
   perform_flag_test!(tok, set_is_alphabetic, is_alphabetic);
 }
+
 
 #[test] fn test_token_hash() {
   macro_rules! perform_hash_test_eq(

@@ -207,9 +207,9 @@ impl<'a, P> WordTokenizer<'a, P>
 impl<'a, P> Iterator for WordTokenizer<'a, P> 
   where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters 
 {
-  type Item = Token;
+  type Item = Token<'a>;
 
-  fn next(&mut self) -> Option<Token> {
+  fn next(&mut self) -> Option<Token<'a>> {
     let mut state = if self.pos == 0 { NEWLINE_START } else { 0u8 };
     let mut start = self.pos;
     let mut is_ellipsis = false;
@@ -591,10 +591,10 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
     for (t, e) in iter.zip(expected) {
       assert!(
-        t.typ() == e.trim(), 
+        t.tok().to_lowercase() == e.trim(), 
         "{} - you: [{}] != exp: [{}]", 
         file,
-        t.typ(),
+        t.tok().to_lowercase(),
         e.trim());
     }
   }
