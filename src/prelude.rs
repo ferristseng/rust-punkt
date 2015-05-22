@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use phf::Set;
 use phf::Map;
 
@@ -52,13 +54,13 @@ pub trait DefinesNonPrefixCharacters {
 }
 
 
-static internal_punct  : Set<char> = phf_set![',', ':', ';', '\u{2014}'];
-static sentence_endings: Set<char> = phf_set!['.', '?', '!'];
-static punctuation     : Set<char> = phf_set![';', ':', ',', '.', '!', '?'];
-static nonword_chars   : Set<char> = phf_set![
+static INTERNAL_PUNCT  : Set<char> = phf_set![',', ':', ';', '\u{2014}'];
+static SENTENCE_ENDINGS: Set<char> = phf_set!['.', '?', '!'];
+static PUNCTUATION     : Set<char> = phf_set![';', ':', ',', '.', '!', '?'];
+static NONWORD_CHARS   : Set<char> = phf_set![
   '?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'', '(', '{', '['
 ];
-static nonprefix_chars : Set<char> = phf_set![
+static NONPREFIX_CHARS : Set<char> = phf_set![
   '(', '"', '`', '{', '[', ':', ';', '&', '#', '*', '@', ')', '}', ']', '-', ','
 ];
 
@@ -71,31 +73,47 @@ pub trait DefaultCharacterDefinitions { }
 
 impl<T> DefinesSentenceEndings for T where T : DefaultCharacterDefinitions {
   #[inline(always)] fn sentence_endings() -> &'static Set<char> { 
-    &sentence_endings 
+    &SENTENCE_ENDINGS 
   }
 }
 
 impl<T> DefinesInternalPunctuation for T where T : DefaultCharacterDefinitions {
   #[inline(always)] fn internal_punctuation() -> &'static Set<char> {
-    &internal_punct
+    &INTERNAL_PUNCT
   }
 }
 
 impl<T> DefinesNonWordCharacters for T where T : DefaultCharacterDefinitions {
   #[inline(always)] fn nonword_chars() -> &'static Set<char> {
-    &nonword_chars
+    &NONWORD_CHARS
   }
 }
 
 impl<T> DefinesPunctuation for T where T : DefaultCharacterDefinitions {
   #[inline(always)] fn punctuation() -> &'static Set<char> {
-    &punctuation
+    &PUNCTUATION
   }
 }
 
 impl<T> DefinesNonPrefixCharacters for T where T : DefaultCharacterDefinitions {
   #[inline(always)] fn nonprefix_chars() -> &'static Set<char> {
-    &nonprefix_chars
+    &NONPREFIX_CHARS
+  }
+}
+
+
+pub trait CaseInsensitiveEq {
+  /// Equals method that ignores case.
+  fn case_insensitive_eq(&self, other: &Self) -> bool;
+}
+
+impl<T> CaseInsensitiveEq for T where T : Deref<Target = str> {
+  #[inline(always)] fn case_insensitive_eq(&self, other: &T) -> bool {
+    self
+      .chars()
+      .flat_map(|c| c.to_lowercase())
+      .zip(other.chars().flat_map(|c| c.to_lowercase()))
+      .fold(true, |acc, (c0, c1)| acc && c0 == c1)
   }
 }
 
@@ -146,20 +164,30 @@ pub static ORTHO_MAP: Map<u8, OrthographicContext> = phf_map! {
 };
 
 
-// Flags that can be set. These describe certain properties about the Token.
-// These 6 flags only use the lower 8 bits.
-const HAS_FINAL_PERIOD  : u16 = 0b0000000000000001;
-const IS_ELLIPSIS       : u16 = 0b0000000000000010;
-const IS_ABBREV         : u16 = 0b0000000000000100;
-const IS_SENTENCE_BREAK : u16 = 0b0000000000001000;
-const IS_PARAGRAPH_START: u16 = 0b0000000000010000;
-const IS_NEWLINE_START  : u16 = 0b0000000000100000;
-const IS_UPPERCASE      : u16 = 0b0000000001000000;
-const IS_LOWERCASE      : u16 = 0b0000000010000000;
+/// Possible cases a letter can be in. OR (|) can be applied to these with 
+/// a OrthographyPosition to get a corrosponding OrthographicContext from 
+/// OrthoMap.
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum LetterCase {
+  Upper,
+  Lower,
+  Unknown,
+}
+
+impl LetterCase {
+  #[inline(always)] pub fn as_byte(&self) -> u8 {
+    match *self {
+      LetterCase::Upper   => 0b00000010,
+      LetterCase::Lower   => 0b00000001,
+      LetterCase::Unknown => 0b00000011
+    }
+  }
+}
 
 
-// These flags only use the upper 8 bits.
-const IS_INITIAL        : u16 = 0b1000000000000000;
-const IS_NUMERIC        : u16 = 0b0100000000000000;
-const IS_NON_PUNCT      : u16 = 0b0010000000000000;
-const IS_ALPHABETIC     : u16 = 0b0000010000000000;
+#[test] fn case_insensitive_eq_str_test() {
+  assert!("ABC".case_insensitive_eq(&"abc"));
+  assert!("hElLo TeSt".case_insensitive_eq(&"hello TEST"));
+  assert!("".case_insensitive_eq(&""));
+  assert!("ÀÁÂÃÄ".case_insensitive_eq(&"àáâãä"));
+}

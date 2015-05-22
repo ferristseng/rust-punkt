@@ -15,7 +15,7 @@
 //! are from NLTK, but customized threshold values and flags can be set.
 
 
-#![feature(plugin, str_char, std_misc, collections)]
+#![feature(plugin, str_char, std_misc, collections, hash)]
 #![cfg_attr(test, allow(unused_must_use))]
 #![cfg_attr(test, feature(test, path_ext, fs_walk))]
 #![plugin(phf_macros)]
