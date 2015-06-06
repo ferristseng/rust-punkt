@@ -23,13 +23,14 @@
 extern crate phf;
 extern crate num;
 extern crate rustc_serialize;
+extern crate freqdist;
 #[cfg(test)] extern crate test;
 
 /// Trainer to train a `SentenceTokenizer`. This module also contains 
 /// default data to use, that was trained for a variety of different languages.
 pub mod trainer;
 
-//mod util;
+mod util;
 mod token;
 mod tokenizer;
 mod prelude;

@@ -1,8 +1,6 @@
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 
-use prelude::CaseInsensitiveEq;
-
 
 // These 6 flags only use the lower 8 bits.
 const HAS_FINAL_PERIOD  : u16 = 0b0000000000000001;
@@ -22,29 +20,29 @@ const IS_NON_PUNCT      : u16 = 0b0010000000000000;
 const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 
 
-#[derive(Clone)]
-pub struct Token<'a> {
-  inner: &'a str,
+#[derive(Eq)]
+pub struct Token {
+  inner: String,
   flags: u16 
 }
 
-impl<'a> Token<'a> {
-  pub fn new(slice: &'a str, is_el: bool, is_pg: bool, is_nl: bool) -> Token {
+impl Token {
+  pub fn new(slice: &str, is_el: bool, is_pg: bool, is_nl: bool) -> Token {
     debug_assert!(slice.len() > 0);
 
     let first = slice.char_at(0);
     let mut has_punct = false;
     let mut tok = Token {
-      inner: slice,
+      inner: slice.to_lowercase(),
       flags: 0x00
     };
 
     if slice.as_bytes()[slice.len() - 1] == b'.' { 
       tok.set_has_final_period(true); 
+    } else {
+      tok.inner.push('.');
     }
-
-    // These are mutually exclusive. Only need to set one, although 
-    // still potentially need to run both checks.
+    
     if is_str_numeric(slice) {
       tok.set_is_numeric(true);
     } else if is_str_initial(slice) {
@@ -73,11 +71,56 @@ impl<'a> Token<'a> {
     tok
   }
 
-  #[inline] pub fn tok(&self) -> &str {
-    if self.is_numeric() {
-      "##number##"
+  /// Returns the normalized original token (which can be reconstructed given the 
+  /// flags on the token are correct).
+  #[inline(always)] pub fn tok(&self) -> &str {
+    if self.has_final_period() {
+      &self.inner[..]
     } else {
-      self.inner
+      &self.inner[..self.inner.len() - 1]
+    }
+  }
+
+  /// Returns the token without a period on the end (if it had one).
+  #[inline(always)] pub fn tok_without_period(&self) -> &str {
+    if self.has_final_period() {
+      &self.tok()[..self.len() - 1]
+    } else {
+      self.tok()
+    }
+  }
+
+  /// Returns the type of the token. If the token is numeric (determined by flags), 
+  /// returns `##number##`, otherwise returns the normalized token.
+  #[inline(always)] pub fn typ(&self) -> &str {
+    if self.is_numeric() { "##number##" } else { &self.inner[..] }
+  }
+
+  /// Returns the type of the token with a period appended to it. Returns 
+  /// `##number##.` if the token is numeric (determined by flags), otherwise 
+  /// returns the original token with a period appended to it.
+  #[inline(always)] pub fn typ_with_period(&self) -> &str {
+    if self.is_numeric() { "##number##." } else { &self.inner[..] }
+  }
+
+  /// Returns the type of the token without a period appended to it. Will return 
+  /// `.`, if it is the only character in the string; otherwise, will slice type 
+  /// to exclude the final period. 
+  #[inline(always)] pub fn typ_without_period(&self) -> &str {
+    if self.tok().len() > 1 && self.has_final_period() {
+      &self.typ_with_period()[..self.typ_with_period().len() - 1]
+    } else {
+      self.typ()
+    }
+  }
+
+  /// Returns the type of the token without a break or period if it had one originally 
+  /// at the end.
+  #[inline(always)] pub fn typ_without_break_or_period(&self) -> &str {
+    if self.is_sentence_break() {
+      self.typ_without_period()
+    } else {
+      self.typ()
     }
   }
 
@@ -121,8 +164,8 @@ impl<'a> Token<'a> {
     self.flags & IS_INITIAL != 0
   }
 
-  // The NLTK docs note that all numeric tokens are considered be not only
-  // punctuation, because they are converted to `##number##`, which clearly
+  // The NLTK docs note that all numeric tokens are considered to be contain 
+  // only punctuation, because they are converted to `##number##`, which clearly
   // has alphabetic characters.
   #[inline(always)] pub fn is_non_punct(&self) -> bool {
     (self.flags & IS_NON_PUNCT != 0) || self.is_numeric()
@@ -229,33 +272,19 @@ impl<'a> Token<'a> {
   }
 }
 
-impl<'a> Deref for Token<'a> {
+impl Deref for Token {
   type Target = str;
 
-  #[inline(always)] fn deref(&self) -> &str { self.inner }
+  #[inline(always)] fn deref(&self) -> &str { &self.inner[..] }
 }
 
-impl<'a> PartialEq for Token<'a> {
-  #[inline(always)] fn eq(&self, other: &Token) -> bool {
-    self.case_insensitive_eq(other)
-  }
+impl PartialEq for Token {
+  #[inline(always)] fn eq(&self, other: &Token) -> bool { self.typ() == other.typ() }
 }
 
-impl<'a> Hash for Token<'a> {
-  fn hash<H>(&self, state: &mut H) where H : Hasher {
-    if self.is_numeric() {
-      "##number##".hash(state);
-    } else {
-      if self.has_final_period() {
-        for c in self[..self.len() - 1].chars().flat_map(|c| c.to_lowercase()) {
-          state.write_u32(c as u32);
-        }
-      } else {
-        for c in self.chars().flat_map(|c| c.to_lowercase()) {
-          state.write_u32(c as u32);
-        }
-      };
-    }
+impl Hash for Token {
+  #[inline(always)] fn hash<H>(&self, state: &mut H) where H : Hasher { 
+    self.typ().hash(state) 
   }
 }
 
@@ -272,7 +301,7 @@ impl<'a> Hash for Token<'a> {
 
   for c in tok.chars() {
     match c {
-      // A digit was found. Note this to confirm punctuation
+      // A digit was found. Note this to confirm later if punctuation
       // within the number is valid or not.
       _ if c.is_digit(10) => {
         digit_found = true
@@ -341,27 +370,4 @@ impl<'a> Hash for Token<'a> {
   perform_flag_test!(tok, set_is_initial, is_initial);
   perform_flag_test!(tok, set_is_non_punct, is_non_punct);
   perform_flag_test!(tok, set_is_alphabetic, is_alphabetic);
-}
-
-
-#[test] fn test_token_hash() {
-  macro_rules! perform_hash_test_eq(
-    ($tok:expr, $cmp:expr) => (
-        {
-          let _t0 = Token::new($tok, false, false, false);
-          let _t1 = Token::new($cmp, false, false, false);
-          let mut _h_t0 = ::std::hash::SipHasher::new();
-          let mut _h_t1 = ::std::hash::SipHasher::new();
-
-          _t1.hash(&mut _h_t0);
-          _t0.hash(&mut _h_t1);
-
-          assert_eq!(_h_t0.finish(), _h_t1.finish());
-        }
-    )
-  );
-
-  perform_hash_test_eq!("ABC", "abc.");
-  perform_hash_test_eq!("1.35", "-100");
-  perform_hash_test_eq!("ÀÁÂÃÄ", "àáâãä");
 }

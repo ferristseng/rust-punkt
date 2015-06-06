@@ -23,7 +23,7 @@ impl<'a> Eq for DataString<'a> { }
 
 impl<'a> PartialEq for DataString<'a> {
   #[inline(always)] fn eq(&self, other: &DataString) -> bool {
-    #[inline] fn normal_unnormal_eq(norm: &str, raw: &str) -> bool {
+    fn normal_unnormal_eq(norm: &str, raw: &str) -> bool {
       raw
         .chars()
         .flat_map(|c| c.to_lowercase())

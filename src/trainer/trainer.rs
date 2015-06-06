@@ -1,88 +1,86 @@
 use std::cmp::min;
 use std::ops::Deref;
+use std::hash::{Hash, Hasher};
 use std::default::Default;
-use collections::borrow::Borrow;
+use std::marker::PhantomData;
 
 use phf::Set;
 use num::Float;
-
+use freqdist::FrequencyDistribution;
+use freqdist::Distribution;
 
 use util;
-use trainer::math;
-use trainer::TrainingTokenKey;
-use trainer::col::Collocation;
+use token::Token;
+use tokenizer::WordTokenizer;
 use trainer::data::TrainingData;
-use tokenizer::{WordTokenizer, WordTokenizerParameters};
-use ortho::{BEG_UC, MID_UC, OrthographyPosition, OrthographicContext, ORTHO_MAP};
+use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters};
 
 
-pub struct Trainer<P> {
-  period_token_count: usize,
-  sentence_break_count: usize,
-  data: &'a mut TrainingData,
-  tokens: Vec<TrainingTokenKey>,
-  type_fdist: FrequencyDistribution<TrainingTokenKey>,
-  collocation_fdist: FrequencyDistribution<Collocation<TrainingTokenKey>>,
-  sentence_starter_fdist: FrequencyDistribution<TrainingTokenKey>
-  params: PhantomData<P>
+#[derive(Debug)]
+pub struct Collocation<T> {
+  l: T,
+  r: T
 }
 
-struct FrequencyCount {
-  with_period: usize 
-  total: usize
+impl<T> Collocation<T> {
+  #[inline(always)] pub fn new(l: T, r: T) -> Collocation<T> { 
+    Collocation { l: l, r: r } 
+  }
+
+  #[inline(always)] pub fn left(&self) -> &T { &self.l }
+  #[inline(always)] pub fn right(&self) -> &T { &self.r }
 }
 
-impl FrequencyCount {
-  fn with_period(&self) -> self.
+impl<T> Eq for Collocation<T> where T : Deref<Target = Token> { }
+
+impl<T> Hash for Collocation<T> where T : Deref<Target = Token> 
+{
+  #[inline(always)] fn hash<H>(&self, state: &mut H) where H : Hasher {
+    (*self.l).typ_without_period().hash(state); 
+    (*self.r).typ_without_break_or_period().hash(state);
+  }
 }
 
-type FrequencyCounter()
+impl<T> PartialEq for Collocation<T> where T : Deref<Target = Token> 
+{
+  #[inline(always)] fn eq(&self, x: &Collocation<T>) -> bool {
+    (*self.l).typ_without_period() == (*x.l).typ_without_period() &&
+    (*self.r).typ_without_break_or_period() == (*x.r).typ_without_break_or_period()
+  }
+}
+
+
+pub struct Trainer<P> { params: PhantomData<P> }
 
 impl<P> Trainer<P> 
   where P : TrainerParameters + DefinesNonPrefixCharacters + DefinesNonWordCharacters 
 {
   /// Creates a new Trainer.
-  #[inline(always)] pub fn new() -> Trainer {
+  #[inline(always)] pub fn new() -> Trainer<P> {
     Trainer { params: PhantomData }
   }
 
-
-  /// This isn't entirely safe, so should be used with extreme caution. It
-  /// returns a mutable reference to data on the Trainer. Mostly this is 
-  /// for the scenario when `data` needs to be modified while iterating, and 
-  /// self needs to be borrowed. It can be reasoned generally that iterating over
-  /// a part of `self` that isn't `data` makes it safe to modify `data` in most cases.
-  #[inline]
-  unsafe fn borrow_data_mut_unsafe(&self) -> &mut TrainingData {
-    &mut *(&*self.data as *const TrainingData as *mut TrainingData)
-  }
-
   /// Train on a document. Does tokenization using a WordTokenizer.
-  pub fn train(self, doc: &str, &mut TrainingData) {
-    // `self.tokens` hold all the tokens that were encountered during 
-    // training. In order to get only the ones for the inputted document, 
-    // the current length needs to be saved.
-    let start = self.tokens.len();
+  pub fn train(self, doc: &str, data: &mut TrainingData) {
+    let mut period_token_count: usize = 0;
+    let mut sentence_break_count: usize = 0;
+    let tokens: Vec<Token> = WordTokenizer::<P>::new(doc).collect();
+    let mut type_fdist: FrequencyDistribution<&str> = FrequencyDistribution::new();
+    //let mut collocation_fdist = FrequencyDistribution::new();
+    //let mut sentence_starter_fdist = FrequencyDistribution::new();
 
-    // Push new tokens that the tokenizer finds from doc into `self.tokens`.
-    for t in WordTokenizer::with_parameters(doc, self.tparams) { 
-      self.tokens.push(TrainingTokenKey::new(t));
+    for t in tokens.iter() {
+      if t.has_final_period() { period_token_count += 1 }
+      type_fdist.insert(t.typ());
     }
+  
 
-    // Acquire the slice from `self.tokens` of tokens only found from this 
-    // document.
-    let slice = &self.tokens[start..];
-
-    // Keep counts of each type for each token in `self.type_fdist`.
-    for t in slice.iter() {
-      self.type_fdist.insert(t.clone());
-
-      if t.has_final_period() { self.period_token_count += 1 }
-    }
-
+    /*
     // Iterate through to see if any tokens need to be reclassified as an abbreviation
     // or removed as an abbreviation.
-    for (t, score) in reclassify_iter(self, self.type_fdist.keys()) {
+    for (t, score) 
+    in ReclassifyIterator {
+      /*
       if score >= self.params.abbrev_lower_bound { 
         if t.has_final_period() {
           unsafe {
@@ -96,6 +94,7 @@ impl<P> Trainer<P>
           }
         }
       }
+      */
     }
 
     // Mark abbreviation types if any exist with the first pass annotation function.
@@ -142,9 +141,11 @@ impl<P> Trainer<P>
         }
         _ => ()
       }
+      */
     }
   }
 
+/*
   /// Empties the trained data, and compiles it with mutably borrow training data. 
   /// Afterwards, the trainer should be dropped (suggested), although finalizing 
   /// could theoretically could occur between each training stage. 
@@ -189,7 +190,6 @@ impl<P> Trainer<P>
   }
 }
 
-/*
 fn is_rare_abbrev_type(
   trainer: &Trainer,
   tok0: &TrainingToken, 
@@ -293,44 +293,40 @@ fn potential_collocation_iter<'a, 'b, I>(
 {
   PotentialCollocationsIterator { iter: iter, trainer: trainer }
 }
+*/
 
-/// A token and its associated score (likelihood of it being a abbreviation).
-type ScoredToken<'a> = (&'a TrainingToken, f64);
 
 /// Iterates over every token from the supplied iterator. Only returns 
 /// the ones that are 'not obviously' abbreviations. Also returns the associated 
 /// score of that token.
-struct PunktReclassifyIterator<'b, I>
-{
+struct ReclassifyIterator<'b, I, P> {
   iter: I,
-  trainer: &'b Trainer<'b>
+  data: &'b TrainingData<'b>,
+  period_token_count: usize,
+  type_fdist: &'b FrequencyDistribution<&'b str>,
+  params: PhantomData<P>
 }
 
-impl<'b, I> Iterator for PunktReclassifyIterator<'b, I> 
-  where I: Iterator<Item = &'b TrainingTokenKey>
-{
-  type Item = ScoredToken<'b>;
 
-  #[inline]
-  fn next(&mut self) -> Option<ScoredToken<'b>> {
+impl<'b, I, P> Iterator for ReclassifyIterator<'b, I, P> 
+  where I : Iterator<Item = &'b Token>, P : TrainerParameters 
+{
+  type Item = (&'b Token, f64);
+
+  #[inline] fn next(&mut self) -> Option<Self::Item> {
     loop {
       match self.iter.next() {
         Some(t) => {
-          let t = t.deref();
-
-          // Numeric tokens or ones that are entirely NOT alphabetic are 
-          // 'obviously not' abbreviations.
-          if !t.is_non_punct() || t.is_numeric()
-          {
+          if !t.is_non_punct() || t.is_numeric() {
             continue;
           }
 
           if t.has_final_period() {
-            if self.trainer.data.contains_abbrev(t.typ()) {
+            if self.data.contains_abbrev(t.typ()) {
               continue;
             }
           } else {
-            if !self.trainer.data.contains_abbrev(t.typ()) {
+            if !self.data.contains_abbrev(t.typ()) {
               continue;
             }
           }
@@ -341,17 +337,17 @@ impl<'b, I> Iterator for PunktReclassifyIterator<'b, I>
             .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
           let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
 
-          let count_with_period = self.trainer.type_fdist.get(t.typ_with_period());
-          let count_without_period = self.trainer.type_fdist.get(t.typ_without_period());
+          let count_with_period = self.type_fdist.get(t.typ_with_period());
+          let count_without_period = self.type_fdist.get(t.typ_without_period());
 
-          let likelihood = math::dunning_log_likelihood(
+          let likelihood = util::dunning_log_likelihood(
             (count_with_period + count_without_period) as f64,
-            self.trainer.period_token_count as f64,
+            self.period_token_count as f64,
             count_with_period as f64,
-            self.trainer.type_fdist.sum_counts() as f64);
+            self.type_fdist.sum_counts() as f64);
 
           let f_length = (-(num_nonperiods as f64)).exp();
-          let f_penalty = if self.trainer.params.ignore_abbrev_penalty {
+          let f_penalty = if P::ignore_abbrev_penalty() {
             0f64
           } else {
             (num_nonperiods as f64).powi(-(count_without_period as i32))
@@ -366,7 +362,7 @@ impl<'b, I> Iterator for PunktReclassifyIterator<'b, I>
     }
   }
 }
-
+/*
 /// Token annotated with its orthographic context.
 type TokenWithContext<'a> = (&'a TrainingToken, OrthographicContext);
 

@@ -180,6 +180,7 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
   }
 }
 
+
 const NEWLINE_START: u8 = 0b00000001;
 const PARAGPH_START: u8 = 0b00000010;
 const CAPTURE_START: u8 = 0b00000100;
@@ -207,9 +208,9 @@ impl<'a, P> WordTokenizer<'a, P>
 impl<'a, P> Iterator for WordTokenizer<'a, P> 
   where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters 
 {
-  type Item = Token<'a>;
+  type Item = Token;
 
-  fn next(&mut self) -> Option<Token<'a>> {
+  fn next(&mut self) -> Option<Token> {
     let mut state = if self.pos == 0 { NEWLINE_START } else { 0u8 };
     let mut start = self.pos;
     let mut is_ellipsis = false;

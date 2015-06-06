@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use phf::Set;
 use phf::Map;
 
@@ -160,22 +158,6 @@ impl TrainerParameters for Default {
 }
 
 
-pub trait CaseInsensitiveEq {
-  /// Equals method that ignores case.
-  fn case_insensitive_eq(&self, other: &Self) -> bool;
-}
-
-impl<T> CaseInsensitiveEq for T where T : Deref<Target = str> {
-  #[inline(always)] fn case_insensitive_eq(&self, other: &T) -> bool {
-    self
-      .chars()
-      .flat_map(|c| c.to_lowercase())
-      .zip(other.chars().flat_map(|c| c.to_lowercase()))
-      .fold(true, |acc, (c0, c1)| acc && c0 == c1)
-  }
-}
-
-
 pub type OrthographicContext = u8;
 
 
@@ -236,12 +218,4 @@ impl LetterCase {
       LetterCase::Unknown => 0b00000011
     }
   }
-}
-
-
-#[test] fn case_insensitive_eq_str_test() {
-  assert!("ABC".case_insensitive_eq(&"abc"));
-  assert!("hElLo TeSt".case_insensitive_eq(&"hello TEST"));
-  assert!("".case_insensitive_eq(&""));
-  assert!("ÀÁÂÃÄ".case_insensitive_eq(&"àáâãä"));
 }
