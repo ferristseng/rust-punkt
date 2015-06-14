@@ -592,10 +592,10 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
     for (t, e) in iter.zip(expected) {
       assert!(
-        t.tok().to_lowercase() == e.trim(), 
+        t.typ().to_lowercase() == e.trim(), 
         "{} - you: [{}] != exp: [{}]", 
         file,
-        t.tok().to_lowercase(),
+        t.typ().to_lowercase(),
         e.trim());
     }
   }

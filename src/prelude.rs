@@ -63,6 +63,7 @@ pub trait DefinesNonPrefixCharacters {
 }
 
 
+/// Configurable parameters for a trainer.
 pub trait TrainerParameters : DefinesSentenceEndings + DefinesInternalPunctuation {
   /// Lower bound score for a token to be considered an abbreviation. 
   fn abbrev_lower_bound() -> f64;

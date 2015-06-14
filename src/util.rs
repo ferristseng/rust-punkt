@@ -2,7 +2,6 @@ use token::Token;
 use trainer::TrainingData;
 use prelude::DefinesSentenceEndings;
 
-use phf::Set;
 use num::Float;
 
 

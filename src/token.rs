@@ -20,8 +20,7 @@ const IS_NON_PUNCT      : u16 = 0b0010000000000000;
 const IS_ALPHABETIC     : u16 = 0b0000010000000000;
 
 
-#[derive(Eq)]
-pub struct Token {
+#[derive(Eq)] pub struct Token {
   inner: String,
   flags: u16 
 }
@@ -93,7 +92,7 @@ impl Token {
   /// Returns the type of the token. If the token is numeric (determined by flags), 
   /// returns `##number##`, otherwise returns the normalized token.
   #[inline(always)] pub fn typ(&self) -> &str {
-    if self.is_numeric() { "##number##" } else { &self.inner[..] }
+    if self.is_numeric() { "##number##" } else { self.tok() }
   }
 
   /// Returns the type of the token with a period appended to it. Returns 
