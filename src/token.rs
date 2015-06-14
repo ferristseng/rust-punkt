@@ -31,16 +31,23 @@ impl Token {
 
     let first = slice.char_at(0);
     let mut has_punct = false;
-    let mut tok = Token {
-      inner: slice.to_lowercase(),
-      flags: 0x00
-    };
 
-    if slice.as_bytes()[slice.len() - 1] == b'.' { 
-      tok.set_has_final_period(true); 
+    // Add a period to any tokens without a period. This is an optimization 
+    // to avoid creating an entirely new token when using as a key.
+    let mut tok = if slice.as_bytes()[slice.len() - 1] == b'.' {
+      let mut tok = Token {
+        inner: String::with_capacity(slice.len()),
+        flags: 0x00
+      };
+
+      tok.set_has_final_period(true);
+      tok
     } else {
-      tok.inner.push('.');
-    }
+      Token {
+        inner: String::with_capacity(slice.len() + 1),
+        flags: 0x00
+      }
+    };
     
     if is_str_numeric(slice) {
       tok.set_is_numeric(true);
@@ -49,12 +56,16 @@ impl Token {
     }
 
     for c in slice.chars() { 
+      for c0 in c.to_lowercase() { tok.inner.push(c0); }
+
       if c.is_alphabetic() || c == '_' {
         tok.set_is_non_punct(true);
       } else if !c.is_digit(10) {
         has_punct = true;
       }
     }
+
+    if !tok.has_final_period() { tok.inner.push('.'); }
     
     if first.is_uppercase() {
       tok.set_is_uppercase(true);
