@@ -1,8 +1,9 @@
 use std::marker::PhantomData;
 
 use token::Token;
+use trainer::TrainingData;
 use prelude::{DefinesSentenceEndings, DefinesNonWordCharacters, 
-  DefinesNonPrefixCharacters};
+  DefinesNonPrefixCharacters, DefinesPunctuation};
 
 
 const STATE_SENT_END: u8 = 0b00000001; // Hit a sentence end state.
@@ -73,49 +74,44 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
     let mut nstart = self.pos;
     let mut state: u8 = 0;
 
+    macro_rules! return_token(
+      () => (
+        {
+          let end = self.pos;
+
+          // Return to the start of a any next token that occured 
+          // with a sentence ending.
+          if state & STATE_UPDT_RET != 0 { self.pos = nstart; }
+
+          return Some((
+            &self.doc[astart..end],
+            nstart,
+            wstart,
+            end));
+        }
+      )
+    );
+
     while self.pos < self.doc.len() {
       let cur = self.doc.char_at(self.pos);
-      
-      macro_rules! return_token(
-        () => (
-          {
-            let end = self.pos;
-
-            // Return to the start of a any next token that occured 
-            // with a sentence ending.
-            if state & STATE_UPDT_RET != 0 {
-              self.pos = nstart;
-            }
-
-            return Some((
-              &self.doc[astart..end],
-              nstart,
-              wstart,
-              end));
-          }
-        )
-      );
 
       match cur {
         // A sentence ending was encountered. Set the appropriate state.
         // This is done anytime a sentence ender is encountered. It should not
         // affect capturing. 
-        c if P::is_sentence_ending(&c) => 
-        {
+        c if P::is_sentence_ending(&c) => {
           state |= STATE_SENT_END;
 
           // If an update is needed on the starting position of the entire token
-          // update it, and toggle the flag back.
+          // update it, and toggle the flag.
           if state & STATE_UPDT_STT != 0 {
             astart = self.pos;
             state ^= STATE_UPDT_STT;
           }
 
           // Capturing a token, and a sentence ending token is encountered. 
-          // This token needs to be revisited, so set retpos to this position.
-          if state & STATE_CAPT_TOK != 0 {
-            state |= STATE_UPDT_RET;
-          }
+          // Flag this token to be revisited.
+          if state & STATE_CAPT_TOK != 0 { state |= STATE_UPDT_RET; }
         }
         // A sentence ending has not yet been countered. If a whitespace is 
         // encountered, the start of the token needs to be updated. Set a flag 
@@ -140,13 +136,12 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
             state |= STATE_TOKN_BEG;
             wstart = self.pos;
           } else if P::is_nonword_char(&c) {
-            // Setup positions for the return macro.
             self.pos += c.len_utf8();
             nstart = self.pos;
 
             match self.lookahead_is_token() {
               Some(x) => self.pos = x,
-              None    => return_token!() 
+              None => return_token!() 
             }
           } else if !P::is_sentence_ending(&c) { 
             state ^= STATE_SENT_END;
@@ -164,9 +159,7 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
           }
         }
         // Whitespace after a token has been encountered. Final state -- return.
-        c if state & STATE_CAPT_TOK != 0 && 
-             c.is_whitespace() =>
-        {
+        c if state & STATE_CAPT_TOK != 0 && c.is_whitespace() => {
           return_token!()
         }
         // Skip if not in a state at all.
@@ -330,29 +323,39 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
 
     None
   }
-
-  #[inline] fn size_hint(&self) -> (usize, Option<usize>) {
-    (self.doc.len() / 5, Some(self.doc.len() / 3))
-  }
 }
 
 
-/*
+/// Iterator over the sentences of a document.
+///
+/// ```
+/// use punkt::{SentenceTokenizer, TrainingData};
+/// use punkt::params::Default;
+///
+/// let doc = "this is a great sentence! this is a sad sentence.";
+/// let data = TrainingData::english();
+///
+/// for sent in SentenceTokenizer::<Default>::new(doc, &data) {
+///   println!("{:?}", sent); 
+/// } 
+/// ```
 pub struct SentenceTokenizer<'a, P> {
   doc: &'a str,
-  iter: PeriodContextTokenizer<'a>,
-  data: &'a TrainingData,
+  data: &'a TrainingData<'a>,
+  iter: PeriodContextTokenizer<'a, P>,
   last: usize,
   params: PhantomData<P>
 }
 
 impl<'a, P> SentenceTokenizer<'a, P> 
-  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + DefinesPunctuation
+  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + 
+            DefinesPunctuation + DefinesSentenceEndings
 {
+  /// Creates a new `SentenceTokenizer`.
   #[inline(always)] pub fn new(
     doc: &'a str, 
-    data: &'a TrainingData) -> SentenceTokenizer<'a, P> 
-  {
+    data: &'a TrainingData<'a>
+  ) -> SentenceTokenizer<'a, P> {
     SentenceTokenizer {
       doc: doc,
       iter: PeriodContextTokenizer::new(doc),
@@ -364,85 +367,81 @@ impl<'a, P> SentenceTokenizer<'a, P>
 }
 
 impl<'a, P> Iterator for SentenceTokenizer<'a, P> 
-  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + DefinesPunctuation
+  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + 
+            DefinesPunctuation + DefinesSentenceEndings
 {
   type Item = &'a str; 
 
   fn next(&mut self) -> Option<&'a str> {
-    loop {
-      match self.iter.next() {
-        Some((slice, tok_start, ws_start, slice_end)) => {
-          let mut prv = None;
-          let mut has_sentence_break = false;
+    while let Some((slice, tok_start, ws_start, slice_end)) = self.iter.next() {
+      let mut prv = None;
+      let mut has_sentence_break = false;
 
-          // Get word tokens in the slice. If any of them has a sentence break,
-          // then set the flag `has_sentence_break`.
-          for mut t in WordTokenizer::with_parameters(slice, self.params.wtokp) {
-            // First pass annotation can occur for each token.
-            util::annotate_first_pass(
-              &mut t, 
-              self.data, 
-              self.iter.params.sent_end);
+      // Get word tokens in the slice. If any of them has a sentence break,
+      // then set the flag `has_sentence_break`.
+      for mut t in WordTokenizer::<P>::new(slice) {
+        // First pass annotation can occur for each token...
+        ::util::annotate_first_pass::<P>(&mut t, self.data);
 
-            // Second pass annotation is a bit more finicky...It depends on the previous 
-            // token that was found.
-            match prv {
-              Some(mut p) => {
-                annotate_second_pass(
-                  &mut t, 
-                  &mut p,
-                  self.data, 
-                  self.params.punct);
+        // Second pass annotation is a bit more finicky...It depends on the 
+        // previous token that was found.
+        match prv {
+          Some(mut p) => {
+            annotate_second_pass::<P>(&mut t, &mut p, self.data);
 
-                if p.is_sentence_break() {
-                  has_sentence_break = true;
-                  break;
-                }
-              }
-              None => ()
-            }
-
-            prv = Some(t);
-          }
-
-          // If there is a token with a sentence break, it is the end of 
-          // a sentence. Set the beginning of the next sentence to the start 
-          // of the start of the token, or the end of the slice if the token is 
-          // punctuation. Then return the sentence.
-          if has_sentence_break {
-            let start = self.last;
-
-            return if tok_start == slice_end {
-              self.last = slice_end - 1;
-              Some(&self.doc[start..slice_end - 1])
-            } else {
-              self.last = tok_start;
-              Some(&self.doc[start..ws_start])
+            if p.is_sentence_break() {
+              has_sentence_break = true;
+              break;
             }
           }
+          None => ()
         }
-        None => break
+
+        prv = Some(t);
+      }
+
+      // If there is a token with a sentence break, it is the end of 
+      // a sentence. Set the beginning of the next sentence to the start 
+      // of the start of the token, or the end of the slice if the token is 
+      // punctuation. Then return the sentence.
+      if has_sentence_break  {
+        let start = self.last;
+
+        return if tok_start == slice_end {
+          self.last = slice_end - 1;
+          Some(&self.doc[start..slice_end - 1])
+        } else {
+          self.last = tok_start;
+          Some(&self.doc[start..ws_start])
+        }
       }
     }
 
-    None
+    // TODO: NLTK gives u back the remaining text as a sentence, including 
+    // trailing whitespace. Ideally, this wouldn't return trailing whitespace. 
+    if self.iter.pos == self.doc.len() {
+      self.iter.pos += 1;
+      Some(&self.doc[self.last..self.doc.len()])
+    } else {
+      None
+    }
   }
 }
 
 
-/// Orthographic heuristic uses 'physical' properties of the token to 
+/// Orthographic heuristic uses structural properties of the token to 
 /// decide whether a token is the first in a sentence or not. If no 
 /// decision can be made, None is returned.
-fn orthographic_heuristic(
+fn orthographic_heuristic<P>(
   tok: &Token,
   data: &TrainingData
-) -> Option<bool> {
-  if punc.contains(&tok.token().char_at(0)) {
+) -> Option<bool> where P : DefinesPunctuation {
+  use prelude::{ORT_LC, MID_UC, ORT_UC, BEG_LC};
+
+  if P::is_punctuation(&tok.tok().char_at(0)) {
     Some(false)
   } else {
-    let ctxt = *data
-      .get_orthographic_context(tok.typ_without_break_or_period())
-      .unwrap_or(&0); 
+    let ctxt = data.get_orthographic_context(tok.typ_without_break_or_period()); 
 
     if tok.is_uppercase() && (ctxt & ORT_LC != 0) && (ctxt & MID_UC == 0) {
       Some(true)
@@ -457,13 +456,15 @@ fn orthographic_heuristic(
 }
 
 
-/// Performs a second pass annotation on the tokens revising any 
-fn annotate_second_pass(
+/// Performs a second pass annotation on the tokens revising any previously
+/// made decisions if new, relevant data is known. 
+fn annotate_second_pass<P>(
   cur: &mut Token,
   prv: &mut Token,
   data: &TrainingData
-) {
-  // Known Collocation
+) where P : DefinesPunctuation {
+  use prelude::ORT_LC;
+
   if data.contains_collocation(
     prv.typ_without_period(), cur.typ_without_break_or_period())
   {
@@ -474,7 +475,7 @@ fn annotate_second_pass(
 
   if (prv.is_abbrev() || prv.is_ellipsis()) && !prv.is_initial() {
     // Abbreviation with orthographic heuristic
-    if orthographic_heuristic(cur, data, punc).unwrap_or(false) {
+    if orthographic_heuristic::<P>(cur, data).unwrap_or(false) {
       prv.set_is_sentence_break(true);
       return; 
     }
@@ -489,7 +490,7 @@ fn annotate_second_pass(
   }
 
   if prv.is_initial() || prv.is_numeric() {
-    let ortho_dec = orthographic_heuristic(cur, data, punc);
+    let ortho_dec = orthographic_heuristic::<P>(cur, data);
 
     // Initial or Number with orthographic heuristic
     if !ortho_dec.unwrap_or(true) {
@@ -498,9 +499,7 @@ fn annotate_second_pass(
       return;
     }
 
-    let ctxt = *data
-      .get_orthographic_context(cur.typ_without_break_or_period())
-      .unwrap_or(&0);
+    let ctxt = data.get_orthographic_context(cur.typ_without_break_or_period());
 
     // Initial with special orthographic heuristic
     if ortho_dec.is_none() && 
@@ -513,7 +512,6 @@ fn annotate_second_pass(
     }
   }
 }
-*/
 
 
 /// Checks if the a slice of the document starting at pos 
@@ -639,6 +637,17 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
   }
 }
 */
+
+
+// https://github.com/ferristseng/rust-punkt/issues/5
+#[test] fn sentence_tokenizer_issue_5_test() {
+  let data = TrainingData::english();
+  let doc = "this is a great sentence! this is a sad sentence.";
+  let mut iter = SentenceTokenizer::<::params::Default>::new(doc, &data);
+
+  assert_eq!(iter.next().unwrap(), "this is a great sentence!");
+  assert_eq!(iter.next().unwrap(), "this is a sad sentence.");
+}
 
 
 macro_rules! bench_word_tokenizer(

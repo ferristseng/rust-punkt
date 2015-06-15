@@ -164,6 +164,8 @@ impl<'a> TrainingData<'a> {
     true
   }
 
+  /// Gets the orthographic context for a token. Returns 0 if the token 
+  /// was not yet encountered.
   #[inline] pub fn get_orthographic_context(&self, tok: &str) -> u8 {
     *self.orthographic_context.get(&UnnormalizedBorrowed(tok)).unwrap_or(&0)
   }

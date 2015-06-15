@@ -36,6 +36,7 @@ mod tokenizer;
 mod prelude;
 
 pub use trainer::{Trainer, TrainingData};
+pub use tokenizer::SentenceTokenizer;
 
 /// Contains traits for configuring all tokenizers, and the trainer. Also 
 /// contains default parameters for tokenizers, and the trainer.
