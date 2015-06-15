@@ -417,7 +417,7 @@ impl<'a, P> Iterator for SentenceTokenizer<'a, P>
       }
     }
 
-    // TODO: NLTK gives u back the remaining text as a sentence, including 
+    // TODO: NLTK gives you back the remaining text as a sentence, including 
     // trailing whitespace. Ideally, this wouldn't return trailing whitespace. 
     if self.iter.pos == self.doc.len() {
       self.iter.pos += 1;
