@@ -162,7 +162,6 @@ impl TrainerParameters for Default {
 pub type OrthographicContext = u8;
 
 
-#[derive(Debug, Eq, PartialEq)]
 pub enum OrthographyPosition {
   Initial,
   Internal,
@@ -204,7 +203,6 @@ pub static ORTHO_MAP: Map<u8, OrthographicContext> = phf_map! {
 };
 
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum LetterCase {
   Upper,
   Lower,
