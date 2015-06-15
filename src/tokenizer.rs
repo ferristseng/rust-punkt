@@ -326,20 +326,20 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
 }
 
 
-/// Iterator over the sentences of a document.
+/// Iterator over the byte offsets of a document.
 ///
 /// ```
-/// use punkt::{SentenceTokenizer, TrainingData};
+/// use punkt::{SentenceByteOffsetTokenizer, TrainingData};
 /// use punkt::params::Default;
 ///
 /// let doc = "this is a great sentence! this is a sad sentence.";
 /// let data = TrainingData::english();
 ///
-/// for sent in SentenceTokenizer::<Default>::new(doc, &data) {
-///   println!("{:?}", sent); 
+/// for (start, end) in SentenceByteOffsetTokenizer::<Default>::new(doc, &data) {
+///   println!("{:?}", &doc[start..end]); 
 /// } 
 /// ```
-pub struct SentenceTokenizer<'a, P> {
+pub struct SentenceByteOffsetTokenizer<'a, P> {
   doc: &'a str,
   data: &'a TrainingData<'a>,
   iter: PeriodContextTokenizer<'a, P>,
@@ -347,16 +347,16 @@ pub struct SentenceTokenizer<'a, P> {
   params: PhantomData<P>
 }
 
-impl<'a, P> SentenceTokenizer<'a, P> 
+impl<'a, P> SentenceByteOffsetTokenizer<'a, P> 
   where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + 
             DefinesPunctuation + DefinesSentenceEndings
 {
-  /// Creates a new `SentenceTokenizer`.
+  /// Creates a new `SentenceByteOffsetTokenizer`.
   #[inline(always)] pub fn new(
     doc: &'a str, 
     data: &'a TrainingData<'a>
-  ) -> SentenceTokenizer<'a, P> {
-    SentenceTokenizer {
+  ) -> SentenceByteOffsetTokenizer<'a, P> {
+    SentenceByteOffsetTokenizer {
       doc: doc,
       iter: PeriodContextTokenizer::new(doc),
       data: data,
@@ -366,13 +366,13 @@ impl<'a, P> SentenceTokenizer<'a, P>
   }
 }
 
-impl<'a, P> Iterator for SentenceTokenizer<'a, P> 
+impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P> 
   where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + 
             DefinesPunctuation + DefinesSentenceEndings
 {
-  type Item = &'a str; 
+  type Item = (usize, usize); 
 
-  fn next(&mut self) -> Option<&'a str> {
+  fn next(&mut self) -> Option<(usize, usize)> {
     while let Some((slice, tok_start, ws_start, slice_end)) = self.iter.next() {
       let mut prv = None;
       let mut has_sentence_break = false;
@@ -409,10 +409,10 @@ impl<'a, P> Iterator for SentenceTokenizer<'a, P>
 
         return if tok_start == slice_end {
           self.last = slice_end - 1;
-          Some(&self.doc[start..slice_end - 1])
+          Some((start, slice_end - 1))
         } else {
           self.last = tok_start;
-          Some(&self.doc[start..ws_start])
+          Some((start, ws_start))
         }
       }
     }
@@ -421,10 +421,58 @@ impl<'a, P> Iterator for SentenceTokenizer<'a, P>
     // trailing whitespace. Ideally, this wouldn't return trailing whitespace. 
     if self.iter.pos == self.doc.len() {
       self.iter.pos += 1;
-      Some(&self.doc[self.last..self.doc.len()])
+      Some((self.last, self.doc.len()))
     } else {
       None
     }
+  }
+}
+
+
+/// Iterator over the sentence slices of a document.
+///
+/// ```
+/// use punkt::{SentenceTokenizer, TrainingData};
+/// use punkt::params::Default;
+///
+/// let doc = "this is a great sentence! this is a sad sentence.";
+/// let data = TrainingData::english();
+///
+/// for sent in SentenceTokenizer::<Default>::new(doc, &data) {
+///   println!("{:?}", sent); 
+/// } 
+/// ```
+pub struct SentenceTokenizer<'a, P> {
+  doc: &'a str,
+  iter: SentenceByteOffsetTokenizer<'a, P>,
+  params: PhantomData<P>
+}
+
+impl<'a, P> SentenceTokenizer<'a, P> 
+  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + 
+            DefinesPunctuation + DefinesSentenceEndings
+{
+  /// Creates a new `SentenceTokenizer`.
+  #[inline(always)] pub fn new(
+    doc: &'a str, 
+    data: &'a TrainingData<'a>
+  ) -> SentenceTokenizer<'a, P> {
+    SentenceTokenizer {
+      doc: doc,
+      iter: SentenceByteOffsetTokenizer::new(doc, data),
+      params: PhantomData
+    }
+  }
+}
+
+impl<'a, P> Iterator for SentenceTokenizer<'a, P> 
+  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters + 
+            DefinesPunctuation + DefinesSentenceEndings
+{
+  type Item = &'a str;
+
+  #[inline] fn next(&mut self) -> Option<&'a str> {
+    self.iter.next().map(|(start, end)| &self.doc[start..end])
   }
 }
 
