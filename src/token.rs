@@ -81,8 +81,8 @@ impl Token {
     tok
   }
 
-  /// Returns the normalized original token (which can be reconstructed given the 
-  /// flags on the token are correct).
+  /// Returns the normalized original token (which can be reconstructed from 
+  /// the inner representation of the token, and the flags on the token).
   #[inline(always)] pub fn tok(&self) -> &str {
     if self.has_final_period() {
       &self.inner[..]
@@ -91,7 +91,7 @@ impl Token {
     }
   }
 
-  /// Returns the token without a period on the end (if it had one).
+  /// Returns the token with any ending period truncated.
   #[inline(always)] pub fn tok_without_period(&self) -> &str {
     if self.has_final_period() {
       &self.tok()[..self.len() - 1]

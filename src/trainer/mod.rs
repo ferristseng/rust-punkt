@@ -1,3 +1,5 @@
 pub use trainer::data::TrainingData;
-pub mod data;
-pub mod trainer;
+pub use trainer::trainer::Trainer;
+
+mod data;
+mod trainer;

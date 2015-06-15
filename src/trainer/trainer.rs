@@ -1,10 +1,8 @@
 use std::cmp::min;
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
-use std::default::Default;
 use std::marker::PhantomData;
 
-use phf::Set;
 use num::Float;
 use freqdist::FrequencyDistribution;
 use freqdist::Distribution;
@@ -16,11 +14,9 @@ use trainer::data::TrainingData;
 use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters};
 
 
-#[derive(Debug)]
-pub struct Collocation<T> {
-  l: T,
-  r: T
-}
+/// A collocation is any pair of words that has a high likelihood of appearing
+/// together.
+#[derive(Debug)] pub struct Collocation<T> { l: T, r: T }
 
 impl<T> Collocation<T> {
   #[inline(always)] pub fn new(l: T, r: T) -> Collocation<T> { 
@@ -50,12 +46,25 @@ impl<T> PartialEq for Collocation<T> where T : Deref<Target = Token>
 }
 
 
+/// A trainer will build data about abbreviations, sentence starters, 
+/// collocations, and context that tokens appear in. The data is 
+/// used by the sentence tokenizer to determine if a period is likely 
+/// part of an abbreviation, or actually marks the termination of a sentence.
 pub struct Trainer<P> { params: PhantomData<P> }
 
 impl<P> Trainer<P> 
   where P : TrainerParameters + DefinesNonPrefixCharacters + DefinesNonWordCharacters 
 {
   /// Creates a new Trainer.
+  ///
+  /// ```
+  /// #![allow(unused_variables)]
+  ///
+  /// use punkt::Trainer;
+  /// use punkt::params::Default;
+  ///
+  /// let trainer: Trainer<Default> = Trainer::new();
+  /// ```
   #[inline(always)] pub fn new() -> Trainer<P> {
     Trainer { params: PhantomData }
   }
@@ -189,37 +198,31 @@ impl<P> Trainer<P>
     self.tokens.clear();
   }
 }
+*/
 
-fn is_rare_abbrev_type(
-  trainer: &Trainer,
-  tok0: &TrainingToken, 
-  tok1: &TrainingToken
-) -> bool {
+
+fn is_rare_abbrev_type<P>(
+  data: &TrainingData,
+  type_fdist: &FrequencyDistribution<&str>, 
+  tok0: &Token, 
+  tok1: &Token
+) -> bool where P : TrainerParameters {
+  use prelude::{BEG_UC, MID_UC};
+
   if tok0.is_abbrev() || !tok0.is_sentence_break() {
-    // Check the first condition, and return if it matches
     false
   } else {
-    let key: &str = tok0.typ_without_break_or_period().borrow();
+    let key = tok0.typ_without_break_or_period();
+    let count = (type_fdist[key] + type_fdist[&key[..key.len() - 1]]) as f64;
 
-    // Count all variations of the token
-    let count = trainer.type_fdist.get(key) + trainer.type_fdist.get(&key[..key.len() - 1]);
-
-    if trainer.data.contains_abbrev(tok0.typ()) || 
-       (count as f64) >= trainer.params.abbrev_upper_bound 
-    {
-      // Check the second condition. Return if it's true...the token is 
-      // already an abbreviation!
+    // Already an abbreviation...
+    if data.contains_abbrev(tok0.typ()) || count >= P::abbrev_upper_bound() {
       false
-    } else if trainer.params.internal_punctuation.contains(&tok1.typ().char_at(0)) {
-      // Check the first case of the final condition
+    } else if P::is_internal_punctuation(&tok1.typ().char_at(0)) {
       true
     } else if tok1.is_lowercase() {
-      let ctxt = *trainer
-        .data
-        .get_orthographic_context(tok1.typ_without_break_or_period())
-        .unwrap_or(&0);
+      let ctxt = data.get_orthographic_context(tok1.typ_without_break_or_period());
 
-      // Check the final condition
       if (ctxt & BEG_UC > 0) && !(ctxt & MID_UC > 0) {
         true
       } else {
@@ -231,69 +234,25 @@ fn is_rare_abbrev_type(
   }
 }
 
-#[inline]
-fn is_potential_sentence_starter(
-  cur: &TrainingToken, 
-  prev: &TrainingToken
+
+#[inline(always)] fn is_potential_sentence_starter(
+  cur: &Token, 
+  prev: &Token
 ) -> bool {
-  prev.is_sentence_break() && 
-  !(prev.is_numeric() || prev.is_initial()) && 
+  prev.is_sentence_break() && !(prev.is_numeric() || prev.is_initial()) && 
   cur.is_alphabetic()
 }
 
-#[inline]
-fn is_potential_collocation(
-  trainer: &Trainer,
-  tok0: &TrainingToken,
-  tok1: &TrainingToken
-) -> bool {
-  (trainer.params.include_all_collocations ||
-  (trainer.params.include_abbrev_collocations && tok0.is_abbrev()) ||
-  (tok0.is_sentence_break() && 
-    (tok0.is_numeric() || tok0.is_initial())) &&
-    tok0.is_non_punct() && 
-    tok1.is_non_punct())
-}
 
-#[inline]
-fn reclassify_iter<'a, 'b, I>(
-  trainer: &'b Trainer<'b>,
-  iter: I
-) -> PunktReclassifyIterator< 'b, I> 
-  where I: Iterator<Item = &'a TrainingTokenKey> 
-{
-  PunktReclassifyIterator { iter: iter, trainer: trainer }
+#[inline(always)] fn is_potential_collocation<P>(
+  tok0: &Token,
+  tok1: &Token
+) -> bool where P : TrainerParameters {
+  P::include_all_collocations() ||
+  (P::include_abbrev_collocations() && tok0.is_abbrev()) ||
+  (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())) &&
+  tok0.is_non_punct() && tok1.is_non_punct()
 }
-
-#[inline]
-fn orthography_iter<'a, I>(
-  iter: I
-) -> TokenWithContextIterator<I> 
-  where I: Iterator<Item = &'a TrainingTokenKey>
-{
-  TokenWithContextIterator { iter: iter, ctxt: OrthographyPosition::Internal }
-}
-
-#[inline]
-fn potential_sentence_starter_iter<'a, 'b, I>(
-  trainer: &'b Trainer,
-  iter: I
-) -> PotentialSentenceStartersIterator<'b, I> 
-  where I: Iterator<Item = &'a TrainingTokenKey>
-{
-  PotentialSentenceStartersIterator { iter: iter, trainer: trainer }
-}
-
-#[inline()]
-fn potential_collocation_iter<'a, 'b, I>(
-  trainer: &'b Trainer,
-  iter: I
-) -> PotentialCollocationsIterator<'b, I> 
-  where I: Iterator<Item = &'a Collocation<TrainingTokenKey>>
-{
-  PotentialCollocationsIterator { iter: iter, trainer: trainer }
-}
-*/
 
 
 /// Iterates over every token from the supplied iterator. Only returns 
