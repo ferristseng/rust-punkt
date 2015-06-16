@@ -17,9 +17,12 @@ use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordChara
 
 /// A collocation is any pair of words that has a high likelihood of appearing
 /// together.
-#[derive(Debug)] pub struct Collocation<T> { l: T, r: T }
+#[derive(Debug, Eq)] pub struct Collocation<T> where T : Deref<Target = Token> { 
+  l: T, 
+  r: T 
+}
 
-impl<T> Collocation<T> {
+impl<T> Collocation<T> where T : Deref<Target = Token> {
   #[inline(always)] pub fn new(l: T, r: T) -> Collocation<T> { 
     Collocation { l: l, r: r } 
   }
@@ -28,18 +31,14 @@ impl<T> Collocation<T> {
   #[inline(always)] pub fn right(&self) -> &T { &self.r }
 }
 
-impl<T> Eq for Collocation<T> where T : Deref<Target = Token> { }
-
-impl<T> Hash for Collocation<T> where T : Deref<Target = Token> 
-{
+impl<T> Hash for Collocation<T> where T : Deref<Target = Token> {
   #[inline(always)] fn hash<H>(&self, state: &mut H) where H : Hasher {
     (*self.l).typ_without_period().hash(state); 
     (*self.r).typ_without_break_or_period().hash(state);
   }
 }
 
-impl<T> PartialEq for Collocation<T> where T : Deref<Target = Token> 
-{
+impl<T> PartialEq for Collocation<T> where T : Deref<Target = Token>  {
   #[inline(always)] fn eq(&self, x: &Collocation<T>) -> bool {
     (*self.l).typ_without_period() == (*x.l).typ_without_period() &&
     (*self.r).typ_without_break_or_period() == (*x.r).typ_without_break_or_period()
@@ -119,13 +118,15 @@ impl<P> Trainer<P>
         self.data.insert_orthographic_context(t.typ_without_break_or_period(), ctxt);
       }
     }
+    */
 
     // Order matters! Sentence break checks are dependent on whether or not 
     // the token is an abbreviation. Must come after the first pass annotation!
-    for t in slice.iter() {
-      if t.is_sentence_break() { self.sentence_break_count += 1; }
+    for t in tokens.iter() {
+      if t.is_sentence_break() { sentence_break_count += 1; }
     }
 
+    /*
     for (lt, rt) in consecutive_token_iter(slice.iter()) {
       match rt {
         Some(cur) if lt.has_final_period() => {
