@@ -1,6 +1,8 @@
 use std::ops::Deref;
 use std::hash::{Hash, Hasher};
 
+use prelude::LetterCase;
+
 
 // These 6 flags only use the lower 8 bits.
 const HAS_FINAL_PERIOD  : u16 = 0b0000000000000001;
@@ -132,6 +134,16 @@ impl Token {
     } else {
       self.typ()
     }
+  }
+
+  #[inline(always)] pub fn first_case(&self) -> LetterCase {
+    if self.is_uppercase() { 
+      LetterCase::Upper
+    } else if self.is_lowercase() { 
+      LetterCase::Lower
+    } else { 
+      LetterCase::Unknown 
+    } 
   }
 
   #[inline(always)] pub fn is_uppercase(&self) -> bool { 

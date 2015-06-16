@@ -11,7 +11,8 @@ use util;
 use token::Token;
 use tokenizer::WordTokenizer;
 use trainer::data::TrainingData;
-use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters};
+use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters,
+  OrthographicContext, OrthographyPosition};
 
 
 /// A collocation is any pair of words that has a high likelihood of appearing
@@ -75,7 +76,7 @@ impl<P> Trainer<P>
     // Iterate through to see if any tokens need to be reclassified as an 
     // abbreviation or removed as an abbreviation.
     {
-      let mut reclassify_iter: ReclassifyIterator<::std::slice::Iter<Token>, P> = 
+      let reclassify_iter: ReclassifyIterator<::std::slice::Iter<Token>, P> = 
         ReclassifyIterator {
           iter: tokens.iter(),
           data: data,
@@ -88,40 +89,31 @@ impl<P> Trainer<P>
       for (t, score) in reclassify_iter {
         if score >= P::abbrev_lower_bound() { 
           if t.has_final_period() {
-            /*
             unsafe {
-              data.insert_abbrev(t.typ_without_period());
+              (&mut *(data as *const TrainingData as *mut TrainingData))
+                .insert_abbrev(t.typ_without_period());
             }
-            */
           }
         } else {
           if !t.has_final_period() {
-            /*
             unsafe {
-              self.borrow_data_mut_unsafe().remove_abbrev(t.typ_without_period());
+              (&mut *(data as *const TrainingData as *mut TrainingData))
+                .remove_abbrev(t.typ_without_period());
             }
-            */
           }
         }
       }
     }
     
-    /*
-    // Mark abbreviation types if any exist with the first pass annotation function.
-    // Note, this also sets `is_sentence_break` flag.
-    for t in slice.iter() {
-      // TrainingTokenKey doesn't provide a mutable interface into a Token by default. 
-      // We have to coerce the Token into being mutable. This is safe, since 
-      // `annotate_first_pass` only modifies the flags. Nothing is being added or removed
-      // from the list of tokens.
+    // Annotating the tokens requires an unsafe block, but it won't modify any pointers,
+    // just will modify some flags on the tokens.
+    for t in tokens.iter() {
       unsafe {
-        util::annotate_first_pass(
-          &mut *(t.deref() as *const TrainingToken as *mut TrainingToken),
-          self.data,
-          self.params.sent_end);
+        util::annotate_first_pass::<P>(&mut *(t as *const Token as *mut Token), data);
       }
     }
 
+    /*
     for (t, ctxt) in orthography_iter(slice.iter()) {
       if ctxt != 0 {
         self.data.insert_orthographic_context(t.typ_without_break_or_period(), ctxt);
@@ -256,6 +248,7 @@ fn is_rare_abbrev_type<P>(
 }
 
 
+
 /// Iterates over every token from the supplied iterator. Only returns 
 /// the ones that are 'not obviously' abbreviations. Also returns the associated 
 /// score of that token.
@@ -267,86 +260,76 @@ struct ReclassifyIterator<'b, I, P> {
   params: PhantomData<P>
 }
 
-
 impl<'b, I, P> Iterator for ReclassifyIterator<'b, I, P> 
   where I : Iterator<Item = &'b Token>, P : TrainerParameters 
 {
   type Item = (&'b Token, f64);
 
   #[inline] fn next(&mut self) -> Option<Self::Item> {
-    loop {
-      match self.iter.next() {
-        Some(t) => {
-          if !t.is_non_punct() || t.is_numeric() {
-            continue;
-          }
-
-          if t.has_final_period() {
-            if self.data.contains_abbrev(t.typ()) {
-              continue;
-            }
-          } else {
-            if !self.data.contains_abbrev(t.typ()) {
-              continue;
-            }
-          }
-
-          let num_periods = t
-            .typ_without_period()
-            .chars()
-            .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
-          let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
-
-          let count_with_period = self.type_fdist.get(t.typ_with_period());
-          let count_without_period = self.type_fdist.get(t.typ_without_period());
-
-          let likelihood = util::dunning_log_likelihood(
-            (count_with_period + count_without_period) as f64,
-            self.period_token_count as f64,
-            count_with_period as f64,
-            self.type_fdist.sum_counts() as f64);
-
-          let f_length = (-(num_nonperiods as f64)).exp();
-          let f_penalty = if P::ignore_abbrev_penalty() {
-            0f64
-          } else {
-            (num_nonperiods as f64).powi(-(count_without_period as i32))
-          };
-
-          let score = likelihood * f_length * f_penalty * (num_periods as f64);
-
-          return Some((t, score))
-        }
-        None => return None
+    while let Some(t) = self.iter.next() {
+      if !t.is_non_punct() || t.is_numeric() {
+        continue;
       }
+
+      if t.has_final_period() {
+        if self.data.contains_abbrev(t.typ()) {
+          continue;
+        }
+      } else {
+        if !self.data.contains_abbrev(t.typ()) {
+          continue;
+        }
+      }
+
+      let num_periods = t
+        .typ_without_period()
+        .chars()
+        .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
+      let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
+
+      let count_with_period = self.type_fdist.get(t.typ_with_period());
+      let count_without_period = self.type_fdist.get(t.typ_without_period());
+
+      let likelihood = util::dunning_log_likelihood(
+        (count_with_period + count_without_period) as f64,
+        self.period_token_count as f64,
+        count_with_period as f64,
+        self.type_fdist.sum_counts() as f64);
+
+      let f_length = (-(num_nonperiods as f64)).exp();
+      let f_penalty = if P::ignore_abbrev_penalty() {
+        0f64
+      } else {
+        (num_nonperiods as f64).powi(-(count_without_period as i32))
+      };
+
+      let score = likelihood * f_length * f_penalty * (num_periods as f64);
+
+      return Some((t, score))
     }
+
+    None
   }
 }
-/*
-/// Token annotated with its orthographic context.
-type TokenWithContext<'a> = (&'a TrainingToken, OrthographicContext);
+
 
 /// Iterates over every token from the supplied iterator and returns its
 /// decided orthography within the given text. 
-struct TokenWithContextIterator<I> 
-{
+struct TokenWithContextIterator<I> {
   iter: I,
   ctxt: OrthographyPosition
 }
 
-impl<'a, I> Iterator for TokenWithContextIterator<I>
-  where I: Iterator<Item = &'a TrainingTokenKey>
+impl<'a, I> Iterator for TokenWithContextIterator<I> 
+  where I: Iterator<Item = &'a Token>
 {
-  type Item = TokenWithContext<'a>;
+  type Item = (&'a Token, OrthographicContext); 
 
   /// Returns tokens annotated with their OrthographicContext. Must keep track 
   /// and modify internal position of where previous tokens were.
-  #[inline]
-  fn next(&mut self) -> Option<TokenWithContext<'a>> {
+  #[inline] fn next(&mut self) -> Option<(&'a Token, OrthographicContext)> {
     match self.iter.next() {
       Some(t) => {
-        let t = t.deref();
-
         if t.is_paragraph_start() && self.ctxt != OrthographyPosition::Unknown {
           self.ctxt = OrthographyPosition::Initial;
         }
@@ -355,7 +338,7 @@ impl<'a, I> Iterator for TokenWithContextIterator<I>
           self.ctxt = OrthographyPosition::Unknown;
         }
 
-        let flag = *ORTHO_MAP
+        let flag = *::prelude::ORTHO_MAP
           .get(&(self.ctxt.as_byte() | t.first_case().as_byte()))
           .unwrap_or(&0); 
 
@@ -378,6 +361,8 @@ impl<'a, I> Iterator for TokenWithContextIterator<I>
   }
 }
 
+
+/*
 /// Iterates over every potential Collocation (determined by log likelihood).
 /// Also returns the likelihood of the potential collocation.
 struct PotentialCollocationsIterator<'b, I> 
@@ -477,16 +462,6 @@ impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'b, I>
       }
     }
   }
-}
-
-/// Constructor for a consecutive token iterator.
-#[inline]
-fn consecutive_token_iter<'a, T, I>(
-  iter: I
-) -> ConsecutiveTokenIterator<'a, T, I>
-  where I: Iterator<Item = &'a T> 
-{
-  ConsecutiveTokenIterator { iter: iter, last: None }
 }
 
 /// Iterates over every PuntkToken from the supplied iterator and returns 

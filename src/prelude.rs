@@ -162,7 +162,7 @@ impl TrainerParameters for Default {
 pub type OrthographicContext = u8;
 
 
-pub enum OrthographyPosition {
+#[derive(PartialEq, Eq)] pub enum OrthographyPosition {
   Initial,
   Internal,
   Unknown

@@ -96,6 +96,11 @@ impl<'a> TrainingData<'a> {
     }
   }
 
+  /// Removes a learned abbreviation.
+  #[inline] pub fn remove_abbrev(&mut self, tok: &'a str) -> bool {
+    self.abbrevs.remove(&UnnormalizedBorrowed(tok))
+  }
+
   /// Check if a token is considered to be a token that commonly starts a 
   /// sentence.
   #[inline(always)] pub fn contains_sentence_starter(&self, tok: &str) -> bool {
