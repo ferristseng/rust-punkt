@@ -1,18 +1,21 @@
 //! # Overview
 //!
-//! Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence tokenization.
-//! Includes a word tokenizer that tokenizes words based on regexes defined in Python's 
-//! NLTK library. Results have been compared with small and large texts that have been 
-//! tokenized with NLTK's library. For usage, check out `PunktSentenceTokenizer`.
+//! Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence 
+//! tokenization. Results have been compared with small and large texts that have 
+//! been tokenized with NLTK's library. 
 //!
 //! # Training
 //!
-//! Training data can be provided to a `PunktSentenceTokenizer` for better results. Data 
-//! can be acquired manually by training with a `PunktTrainer`, or using already compiled
-//! data from NLTK (example: `PunktData::english()`).
+//! Training data can be provided to a `SentenceTokenizer` for better 
+//! results. Data can be acquired manually by training with a `Trainer`, 
+//! or using already compiled data from NLTK (example: `TrainingData::english()`).
 //!
-//! Training parameters can be specified using `PunktTrainerParameters`. The defaults 
-//! are from NLTK, but customized threshold values and flags can be set.
+//! # Customization
+//!
+//!
+//! # Typical Usage
+//!
+//!
 
 #![feature(plugin, str_char, std_misc, collections, hash)]
 #![allow(dead_code)]
@@ -26,14 +29,22 @@ extern crate rustc_serialize;
 extern crate freqdist;
 #[cfg(test)] extern crate test;
 
-/// Trainer to train a `SentenceTokenizer`. This module also contains 
-/// default data to use, that was trained for a variety of different languages.
-pub mod trainer;
-
+mod trainer;
 mod util;
 mod token;
 mod tokenizer;
 mod prelude;
+
+pub use trainer::{Trainer, TrainingData};
+pub use tokenizer::{SentenceTokenizer, SentenceByteOffsetTokenizer};
+
+/// Contains traits for configuring all tokenizers, and the trainer. Also 
+/// contains default parameters for tokenizers, and the trainer.
+pub mod params {
+  pub use prelude::{DefinesSentenceEndings, DefinesInternalPunctuation, 
+    DefinesNonWordCharacters, DefinesPunctuation, DefinesNonPrefixCharacters,
+    TrainerParameters, DefaultCharacterDefinitions, Default};
+}
 
 
 #[cfg(test)] fn get_test_scenarios(

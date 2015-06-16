@@ -65,11 +65,14 @@ impl<'a> Hash for DataString<'a> {
 ///
 /// Precompiled data can be loaded via a language specific constructor.
 ///
-/// ```norun
-/// use punkt::trainer::TrainingData;
+/// ```
+/// use punkt::TrainingData;
 ///
 /// let eng_data = TrainingData::english();
 /// let ger_data = TrainingData::german();
+///
+/// assert!(eng_data.contains_abbrev("va"));
+/// assert!(ger_data.contains_abbrev("crz"));
 /// ``` 
 #[derive(Debug, Default)] pub struct TrainingData<'a> {
   abbrevs: HashSet<DataString<'a>>,
@@ -159,6 +162,12 @@ impl<'a> TrainingData<'a> {
       .insert(NormalizedOwned(tok.to_lowercase()), ctxt);
 
     true
+  }
+
+  /// Gets the orthographic context for a token. Returns 0 if the token 
+  /// was not yet encountered.
+  #[inline] pub fn get_orthographic_context(&self, tok: &str) -> u8 {
+    *self.orthographic_context.get(&UnnormalizedBorrowed(tok)).unwrap_or(&0)
   }
 }
 
