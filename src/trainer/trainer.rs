@@ -16,8 +16,7 @@ use trainer::data::TrainingData;
 use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters};
 
 
-#[derive(Debug)]
-pub struct Collocation<T> {
+#[derive(Debug)] pub struct Collocation<T> {
   l: T,
   r: T
 }
@@ -56,9 +55,7 @@ impl<P> Trainer<P>
   where P : TrainerParameters + DefinesNonPrefixCharacters + DefinesNonWordCharacters 
 {
   /// Creates a new Trainer.
-  #[inline(always)] pub fn new() -> Trainer<P> {
-    Trainer { params: PhantomData }
-  }
+  #[inline(always)] pub fn new() -> Trainer<P> { Trainer { params: PhantomData } }
 
   /// Train on a document. Does tokenization using a WordTokenizer.
   pub fn train(self, doc: &str, data: &mut TrainingData) {
@@ -73,30 +70,42 @@ impl<P> Trainer<P>
       if t.has_final_period() { period_token_count += 1 }
       type_fdist.insert(t.typ());
     }
-  
+    
+    // Iterate through to see if any tokens need to be reclassified as an 
+    // abbreviation or removed as an abbreviation.
+    {
+      let mut reclassify_iter: ReclassifyIterator<::std::slice::Iter<Token>, P> = 
+        ReclassifyIterator {
+          iter: tokens.iter(),
+          data: data,
+          period_token_count: period_token_count,
+          type_fdist: &mut type_fdist,
+          params: PhantomData
+        };
 
-    /*
-    // Iterate through to see if any tokens need to be reclassified as an abbreviation
-    // or removed as an abbreviation.
-    for (t, score) 
-    in ReclassifyIterator {
-      /*
-      if score >= self.params.abbrev_lower_bound { 
-        if t.has_final_period() {
-          unsafe {
-            self.borrow_data_mut_unsafe().insert_abbrev(t.typ_without_period());
+      
+      for (t, score) in reclassify_iter {
+        if score >= P::abbrev_lower_bound() { 
+          if t.has_final_period() {
+            /*
+            unsafe {
+              data.insert_abbrev(t.typ_without_period());
+            }
+            */
           }
-        }
-      } else {
-        if !t.has_final_period() {
-          unsafe {
-            self.borrow_data_mut_unsafe().remove_abbrev(t.typ_without_period());
+        } else {
+          if !t.has_final_period() {
+            /*
+            unsafe {
+              self.borrow_data_mut_unsafe().remove_abbrev(t.typ_without_period());
+            }
+            */
           }
         }
       }
-      */
     }
-
+    
+    /*
     // Mark abbreviation types if any exist with the first pass annotation function.
     // Note, this also sets `is_sentence_break` flag.
     for t in slice.iter() {
