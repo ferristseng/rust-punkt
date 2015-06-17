@@ -154,11 +154,17 @@ impl<'a> TrainingData<'a> {
   /// appears in.
   #[inline] pub fn insert_orthographic_context(
     &mut self, 
-    tok: &'a str, 
+    tok: &str, 
     ctxt: OrthographicContext
   ) -> bool {
-    match self.orthographic_context.get_mut(&UnnormalizedBorrowed(tok)) {
-      Some(c) => { *c |= ctxt; return false }
+    // `get_mut` isn't allowed here, without adding an unnecessary lifetime
+    // qualifier to `tok`. This might be fixed by changing how 
+    // `UnnormalizedBorrow` works.
+    match self.orthographic_context.get(&UnnormalizedBorrowed(tok)) {
+      Some(c) => unsafe { 
+        *(c as *const OrthographicContext as *mut OrthographicContext) |= ctxt; 
+        return false 
+      },
       None => () 
     }
 

@@ -11,16 +11,15 @@ use util;
 use token::Token;
 use tokenizer::WordTokenizer;
 use trainer::data::TrainingData;
-use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters,
-  OrthographicContext, OrthographyPosition};
+use prelude::{TrainerParameters, DefinesNonPrefixCharacters, 
+  DefinesNonWordCharacters, OrthographicContext, OrthographyPosition};
 
 
 /// A collocation is any pair of words that has a high likelihood of appearing
 /// together.
-#[derive(Debug, Eq)] pub struct Collocation<T> where T : Deref<Target = Token> { 
-  l: T, 
-  r: T 
-}
+#[derive(Debug, Eq)] pub struct Collocation<T> 
+  where T : Deref<Target = Token> 
+{ l: T, r: T }
 
 impl<T> Collocation<T> where T : Deref<Target = Token> {
   #[inline(always)] pub fn new(l: T, r: T) -> Collocation<T> { 
@@ -28,6 +27,7 @@ impl<T> Collocation<T> where T : Deref<Target = Token> {
   }
 
   #[inline(always)] pub fn left(&self) -> &T { &self.l }
+
   #[inline(always)] pub fn right(&self) -> &T { &self.r }
 }
 
@@ -64,8 +64,8 @@ impl<P> Trainer<P>
     let mut sentence_break_count: usize = 0;
     let tokens: Vec<Token> = WordTokenizer::<P>::new(doc).collect();
     let mut type_fdist: FrequencyDistribution<&str> = FrequencyDistribution::new();
-    //let mut collocation_fdist = FrequencyDistribution::new();
-    //let mut sentence_starter_fdist = FrequencyDistribution::new();
+    let mut collocation_fdist = FrequencyDistribution::new();
+    let mut sentence_starter_fdist = FrequencyDistribution::new();
 
     for t in tokens.iter() {
       if t.has_final_period() { period_token_count += 1 }
@@ -83,8 +83,7 @@ impl<P> Trainer<P>
           type_fdist: &mut type_fdist,
           params: PhantomData
         };
-
-      
+ 
       for (t, score) in reclassify_iter {
         if score >= P::abbrev_lower_bound() { 
           if t.has_final_period() {
@@ -112,13 +111,19 @@ impl<P> Trainer<P>
       }
     }
 
-    /*
-    for (t, ctxt) in orthography_iter(slice.iter()) {
-      if ctxt != 0 {
-        self.data.insert_orthographic_context(t.typ_without_break_or_period(), ctxt);
+    // Update or insert the orthographic context of all tokens in the document.
+    {
+      let token_with_context_iter = TokenWithContextIterator {
+        iter: tokens.iter(),
+        ctxt: OrthographyPosition::Internal
+      };
+
+      for (t, ctxt) in token_with_context_iter {
+        if ctxt != 0 {
+          data.insert_orthographic_context(t.typ_without_break_or_period(), ctxt);
+        }
       }
     }
-    */
 
     // Order matters! Sentence break checks are dependent on whether or not 
     // the token is an abbreviation. Must come after the first pass annotation!
@@ -126,27 +131,35 @@ impl<P> Trainer<P>
       if t.is_sentence_break() { sentence_break_count += 1; }
     }
 
-    /*
-    for (lt, rt) in consecutive_token_iter(slice.iter()) {
-      match rt {
-        Some(cur) if lt.has_final_period() => {
-          if is_rare_abbrev_type(self, lt.deref(), cur.deref()) {
-            self.data.insert_abbrev(lt.typ_without_period());
-          }
+    // Iterate over tokens, and determine if they're abbreviations or if they 
+    // are potential sentence starters or potential collocations.
+    {
+      let consecutive_token_iter = ConsecutiveItemIterator {
+        iter: tokens.iter(),
+        last: None
+      };
 
-          if is_potential_sentence_starter(cur.deref(), lt.deref()) {
-            self.sentence_starter_fdist.insert(cur.clone());
-          }
+      for (lt, rt) in consecutive_token_iter {
+        match rt {
+          Some(cur) if lt.has_final_period() => {
+            if is_rare_abbrev_type::<P>(&data, &type_fdist, lt, cur) {
+              data.insert_abbrev(lt.typ_without_period());
+            }
 
-          if is_potential_collocation(self, lt.deref(), cur.deref()) {
-            self.collocation_fdist.insert(Collocation::new(lt.clone(), cur.clone()));
+            if is_potential_sentence_starter(cur, lt) {
+              sentence_starter_fdist.insert(cur);
+            }
+
+            if is_potential_collocation::<P>(lt, cur) {
+              collocation_fdist.insert(Collocation::new(lt, cur));
+            }
           }
+          _ => ()
         }
-        _ => ()
       }
-      */
     }
   }
+}
 
 /*
   /// Empties the trained data, and compiles it with mutably borrow training data. 
@@ -247,7 +260,6 @@ fn is_rare_abbrev_type<P>(
   (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())) &&
   tok0.is_non_punct() && tok1.is_non_punct()
 }
-
 
 
 /// Iterates over every token from the supplied iterator. Only returns 
@@ -464,35 +476,33 @@ impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'b, I>
     }
   }
 }
+*/
 
-/// Iterates over every PuntkToken from the supplied iterator and returns 
-/// the immediate following token. Returns None for the following token on the 
-/// last token.
-struct ConsecutiveTokenIterator<'a, T: 'a, I> 
+
+/// Iterates over pairs of items, with the last item returning 
+/// `(Some(T), None)`.
+struct ConsecutiveItemIterator<'a, T : 'a, I> 
   where I: Iterator<Item = &'a T>
 {
   iter: I,
   last: Option<&'a T>
 }
 
-impl<'a, T: 'a, I> Iterator for ConsecutiveTokenIterator<'a, T, I>
-  where I: Iterator<Item = &'a T>
+impl<'a, T : 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I>
+  where I : Iterator<Item = &'a T>
 {
   type Item = (&'a T, Option<&'a T>); 
 
-  #[inline]
-  fn next(&mut self) -> Option<(&'a T, Option<&'a T>)> {
+  #[inline] fn next(&mut self) -> Option<(&'a T, Option<&'a T>)> {
     match self.last {
-      Some(tok) => {
+      Some(i) => {
         self.last = self.iter.next();
-
-        Some((tok, self.last))
+        Some((i, self.last))
       }
       None => match self.iter.next() {
-        Some(tok) => {
+        Some(i) => {
           self.last = self.iter.next();
-
-          Some((tok, self.last))
+          Some((i, self.last))
         }
         None => None
       }
@@ -500,6 +510,8 @@ impl<'a, T: 'a, I> Iterator for ConsecutiveTokenIterator<'a, T, I>
   }
 }
 
+
+/*
 macro_rules! bench_trainer(
   ($name:ident, $doc:expr) => (
     #[bench]
