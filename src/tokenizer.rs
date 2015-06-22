@@ -652,12 +652,11 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 }
 
 
-/*
 #[cfg(test)] fn train_on_document(data: &mut TrainingData, doc: &str) {
-  let mut trainer = Trainer::new(data);
+  use trainer::Trainer;
 
-  trainer.train(&doc);
-  trainer.finalize();
+  let trainer: Trainer<::prelude::Default> = Trainer::new();
+  trainer.train(&doc, data);
 }
 
 
@@ -665,11 +664,14 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
   let cases = super::get_test_scenarios("test/sentence/", "test/raw/");
 
   for (expected, raw, file) in cases {
-    let mut data = Default::default();
+    let mut data = TrainingData::english();
 
     train_on_document(&mut data, &raw[..]);
 
-    for (t, e) in SentenceTokenizer::new(&raw[..], &data).zip(expected.iter()) {
+    let iter: SentenceTokenizer<::prelude::Default> = 
+      SentenceTokenizer::new(&raw[..], &data);
+    
+    for (t, e) in iter.zip(expected.iter()) {
       let s = format!("[{}]", t)
         .replace("\"", "\\\"")
         .replace("\n", "\\n")
@@ -684,7 +686,6 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
     }
   }
 }
-*/
 
 
 // https://github.com/ferristseng/rust-punkt/issues/5
@@ -700,8 +701,7 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
 macro_rules! bench_word_tokenizer(
   ($name:ident, $doc:expr) => (
-    #[bench]
-    fn $name(b: &mut ::test::Bencher) {
+    #[bench] fn $name(b: &mut ::test::Bencher) {
       b.iter(|| {
         let t: WordTokenizer<::prelude::Default> = WordTokenizer::new($doc);
         let _: Vec<Token> = t.collect();
@@ -727,21 +727,19 @@ bench_word_tokenizer!(
   include_str!("../test/raw/pride-and-prejudice.txt"));
 
 
-/*
 macro_rules! bench_sentence_tokenizer(
   ($name:ident, $doc:expr) => (
-    #[bench]
-    fn $name(b: &mut Bencher) {
+    #[bench] fn $name(b: &mut ::test::Bencher) {
       let doc = $doc;
 
       b.iter(|| {
-        let mut data = Default::default();
-        let mut s: SentenceTokenizer<::prelude::Default> = 
-          SentenceTokenizer::new(doc, &mut data);
+        let mut data = TrainingData::english();
 
         train_on_document(&mut data, doc);
 
-        let _: Vec<&str> = s.collect();
+        let iter: SentenceTokenizer<::prelude::Default> = 
+          SentenceTokenizer::new(doc, &mut data);
+        let _: Vec<&str> = iter.collect();
       })
     }
   )
@@ -758,4 +756,3 @@ bench_sentence_tokenizer!(
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_long,
   include_str!("../test/raw/pride-and-prejudice.txt"));
-*/

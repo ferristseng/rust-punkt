@@ -17,7 +17,7 @@
 //!
 //!
 
-#![feature(plugin, str_char, std_misc, collections, hash)]
+#![feature(plugin, str_char, collections, hash)]
 #![allow(dead_code)]
 #![cfg_attr(test, feature(test, path_ext, fs_walk))]
 #![plugin(phf_macros)]

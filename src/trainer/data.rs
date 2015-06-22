@@ -157,10 +157,6 @@ impl<'a> TrainingData<'a> {
     tok: &str, 
     ctxt: OrthographicContext
   ) -> bool {
-    let valu = {
-      self.orthographic_context.get_mut(&UnnormalizedBorrowed(tok)).unwrap()
-    };
-
     // `get_mut` isn't allowed here, without adding an unnecessary lifetime
     // qualifier to `tok`. This might be fixed by changing how 
     // `UnnormalizedBorrow` works.

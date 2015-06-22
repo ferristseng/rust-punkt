@@ -64,25 +64,24 @@ impl<P> Trainer<P>
     let mut sentence_break_count: usize = 0;
     let tokens: Vec<Token> = WordTokenizer::<P>::new(doc).collect();
     let mut type_fdist: FrequencyDistribution<&str> = FrequencyDistribution::new();
-    let mut collocation_fdist = FrequencyDistribution::new();
-    let mut sentence_starter_fdist = FrequencyDistribution::new();
+    //let mut collocation_fdist = FrequencyDistribution::new();
+    //let mut sentence_starter_fdist = FrequencyDistribution::new();
 
     for t in tokens.iter() {
       if t.has_final_period() { period_token_count += 1 }
       type_fdist.insert(t.typ());
     }
-    
+    /*
     // Iterate through to see if any tokens need to be reclassified as an 
     // abbreviation or removed as an abbreviation.
     {
-      let reclassify_iter: ReclassifyIterator<::std::slice::Iter<Token>, P> = 
-        ReclassifyIterator {
-          iter: tokens.iter(),
-          data: data,
-          period_token_count: period_token_count,
-          type_fdist: &mut type_fdist,
-          params: PhantomData
-        };
+      let reclassify_iter: ReclassifyIterator<_, P> = ReclassifyIterator {
+        iter: tokens.iter(),
+        data: data,
+        period_token_count: period_token_count,
+        type_fdist: &mut type_fdist,
+        params: PhantomData
+      };
  
       for (t, score) in reclassify_iter {
         if score >= P::abbrev_lower_bound() { 
@@ -158,6 +157,22 @@ impl<P> Trainer<P>
         }
       }
     }
+
+    {
+      let ss_iter: PotentialSentenceStartersIterator<_, P> = 
+        PotentialSentenceStartersIterator {
+          iter: sentence_starter_fdist.keys(),
+          sentence_break_count: sentence_break_count,
+          type_fdist: &type_fdist,
+          sentence_starter_fdist: &sentence_starter_fdist,
+          params: PhantomData
+        };
+
+      for (tok, _) in ss_iter {
+        data.insert_sentence_starter(tok.typ());
+      }
+    }
+    */
   }
 }
 
@@ -182,9 +197,6 @@ impl<P> Trainer<P>
         self.borrow_data_mut_unsafe().insert_sentence_starter(tok.typ());
       }
     }
-
-    self.data.clear_collocations();
-
     for (col, _)
     in potential_collocation_iter(
       self,
@@ -196,13 +208,6 @@ impl<P> Trainer<P>
           col.right().deref().typ_without_break_or_period());
       }
     }
-
-    self.period_token_count = 0;
-    self.sentence_break_count = 0;
-    self.type_fdist.clear();
-    self.sentence_starter_fdist.clear();
-    self.collocation_fdist.clear();
-    self.tokens.clear();
   }
 }
 */
@@ -326,8 +331,6 @@ impl<'b, I, P> Iterator for ReclassifyIterator<'b, I, P>
 }
 
 
-/// Iterates over every token from the supplied iterator and returns its
-/// decided orthography within the given text. 
 struct TokenWithContextIterator<I> {
   iter: I,
   ctxt: OrthographyPosition
@@ -338,8 +341,6 @@ impl<'a, I> Iterator for TokenWithContextIterator<I>
 {
   type Item = (&'a Token, OrthographicContext); 
 
-  /// Returns tokens annotated with their OrthographicContext. Must keep track 
-  /// and modify internal position of where previous tokens were.
   #[inline] fn next(&mut self) -> Option<(&'a Token, OrthographicContext)> {
     match self.iter.next() {
       Some(t) => {
@@ -375,112 +376,105 @@ impl<'a, I> Iterator for TokenWithContextIterator<I>
 }
 
 
-/*
-/// Iterates over every potential Collocation (determined by log likelihood).
-/// Also returns the likelihood of the potential collocation.
-struct PotentialCollocationsIterator<'b, I> 
-{
+struct PotentialCollocationsIterator<'b, I, P> {
   iter: I,
-  trainer: &'b Trainer<'b>
+  data: &'b TrainingData<'b>,
+  type_fdist: &'b FrequencyDistribution<&'b str>,
+  collocation_fdist: &'b FrequencyDistribution<Collocation<&'b Token>>,
+  params: PhantomData<P>
 }
 
-impl<'a, 'b, I> Iterator for PotentialCollocationsIterator<'b, I> 
-  where I: Iterator<Item = &'a Collocation<TrainingTokenKey>>
+impl<'a, 'b, I, P> Iterator for PotentialCollocationsIterator<'b, I, P> 
+  where I : Iterator<Item = &'a Collocation<&'a Token>>,
+        P : TrainerParameters 
 {
-  type Item = (&'a Collocation<TrainingTokenKey>, f64);
+  type Item = (&'a Collocation<&'a Token>, f64);
 
-  #[inline]
-  fn next(&mut self) -> Option<(&'a Collocation<TrainingTokenKey>, f64)> {
-    loop {
-      match self.iter.next() {
-        Some(col) => {
-          if self.trainer.data.contains_sentence_starter(
-             col.right().typ_without_break_or_period()) 
-          {
-            continue;    
-          }
+  #[inline] fn next(&mut self) -> Option<(&'a Collocation<&'a Token>, f64)> {
+    while let Some(col) = self.iter.next() {
+      if self.data.contains_sentence_starter(
+         col.right().typ_without_break_or_period()) 
+      {
+        continue;    
+      }
 
-          let count = self.trainer.collocation_fdist.get(col);
+      let count = self.collocation_fdist.get(col);
 
-          let left_count = 
-            self.trainer.type_fdist.get(col.left().typ_without_period()) +
-            self.trainer.type_fdist.get(col.left().typ_with_period());
-          let right_count = 
-            self.trainer.type_fdist.get(col.right().typ_without_period()) + 
-            self.trainer.type_fdist.get(col.right().typ_with_period());
+      let left_count = 
+        self.type_fdist.get(col.left().typ_without_period()) +
+        self.type_fdist.get(col.left().typ_with_period());
+      let right_count = 
+        self.type_fdist.get(col.right().typ_without_period()) + 
+        self.type_fdist.get(col.right().typ_with_period());
 
-          if left_count > 1 && 
-             right_count > 1 &&
-             self.trainer.params.collocation_frequency_lower_bound < count as f64 &&
-             count <= min(left_count, right_count)
-          {
-            let likelihood = math::col_log_likelihood(
-              left_count as f64,
-              right_count as f64,
-              count as f64,
-              self.trainer.type_fdist.sum_counts() as f64);
+      if left_count > 1 && 
+         right_count > 1 &&
+         P::collocation_frequency_lower_bound() < count as f64 &&
+         count <= min(left_count, right_count)
+      {
+        let likelihood = util::col_log_likelihood(
+          left_count as f64,
+          right_count as f64,
+          count as f64,
+          self.type_fdist.sum_counts() as f64);
 
-            if likelihood >= self.trainer.params.collocation_lower_bound &&
-               (self.trainer.type_fdist.sum_counts() as f64 / left_count as f64) >
-               (right_count as f64 / count as f64)
-            {
-              return Some((col, likelihood))
-            }
-          }
+        if likelihood >= P::collocation_lower_bound() &&
+           (self.type_fdist.sum_counts() as f64 / left_count as f64) >
+           (right_count as f64 / count as f64)
+        {
+          return Some((col, likelihood))
         }
-        None => return None
       }
     }
+
+    None
   }
 }
 
-struct PotentialSentenceStartersIterator< 'b, I>
-{
+
+struct PotentialSentenceStartersIterator<'b, I, P> {
   iter: I,
-  trainer: &'b Trainer<'b>
+  sentence_break_count: usize,
+  type_fdist: &'b FrequencyDistribution<&'b str>,
+  sentence_starter_fdist: &'b FrequencyDistribution<&'b Token>,
+  params: PhantomData<P>
 }
 
-impl<'a, 'b, I> Iterator for PotentialSentenceStartersIterator<'b, I> 
-  where I: Iterator<Item = &'a TrainingTokenKey>
+impl<'a, 'b, I, P> Iterator for PotentialSentenceStartersIterator<'b, I, P> 
+  where I : Iterator<Item = &'a &'a Token>,
+        P : TrainerParameters 
 {
-  type Item = ScoredToken<'a>;
+  type Item = (&'a Token, f64);
 
-  #[inline]
-  fn next(&mut self) -> Option<ScoredToken<'a>> {
-    loop {
-      match self.iter.next() {
-        Some(tok) => {
-          let ss_count = self.trainer.sentence_starter_fdist.get(tok.typ());
-          let typ_count = 
-            self.trainer.type_fdist.get(tok.typ_with_period()) + 
-            self.trainer.type_fdist.get(tok.typ_without_period());
+  #[inline] fn next(&mut self) -> Option<(&'a Token, f64)> {
+    while let Some(tok) = self.iter.next() {
+      let ss_count = self.sentence_starter_fdist.get(tok);
+      let typ_count = 
+        self.type_fdist.get(tok.typ_with_period()) + 
+        self.type_fdist.get(tok.typ_without_period());
 
-          if typ_count < ss_count { continue; }
+      if typ_count < ss_count { continue; }
 
-          let likelihood = math::col_log_likelihood(
-            self.trainer.sentence_break_count as f64,
-            typ_count as f64,
-            ss_count as f64,
-            self.trainer.type_fdist.sum_counts() as f64);
+      let likelihood = util::col_log_likelihood(
+        self.sentence_break_count as f64,
+        typ_count as f64,
+        ss_count as f64,
+        self.type_fdist.sum_counts() as f64);
 
-          if likelihood >= self.trainer.params.sentence_starter_lower_bound &&
-             (self.trainer.type_fdist.sum_counts() as f64 / 
-             self.trainer.sentence_break_count as f64) > 
-             (typ_count as f64 / ss_count as f64)
-          {
-            return Some((tok.deref(), likelihood));
-          }
-        }
-        None => return None
+      let ratio = self.type_fdist.sum_counts() as f64 / self.sentence_break_count as f64;
+
+      if likelihood >= P::sentence_starter_lower_bound() &&
+         ratio > (typ_count as f64 / ss_count as f64)
+      {
+        return Some((*tok, likelihood));
       }
     }
+
+    None
   }
 }
-*/
 
 
-/// Iterates over pairs of items, with the last item returning 
-/// `(Some(T), None)`.
 struct ConsecutiveItemIterator<'a, T : 'a, I> 
   where I: Iterator<Item = &'a T>
 {
@@ -511,17 +505,14 @@ impl<'a, T : 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I>
 }
 
 
-/*
 macro_rules! bench_trainer(
   ($name:ident, $doc:expr) => (
-    #[bench]
-    fn $name(b: &mut ::test::Bencher) {
+    #[bench] fn $name(b: &mut ::test::Bencher) {
       b.iter(|| {
-        let mut data = Default::default();
-        let mut trainer = Trainer::new(&mut data);
+        let mut data = TrainingData::english();
+        let trainer: Trainer<::prelude::Default> = Trainer::new();
 
-        trainer.train($doc);
-        trainer.finalize();
+        trainer.train($doc, &mut data);
       })
     }
   )
@@ -542,4 +533,3 @@ bench_trainer!(
 bench_trainer!(
   bench_trainer_very_long,
   include_str!("../../test/raw/pride-and-prejudice.txt"));
-*/
