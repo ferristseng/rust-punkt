@@ -3,33 +3,100 @@
 [![Build Status](https://travis-ci.org/ferristseng/rust-punkt.svg)](https://travis-ci.org/ferristseng/rust-punkt)
 [![](http://meritbadge.herokuapp.com/punkt)](https://crates.io/crates/punkt)
 
-Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence tokenization.
-Results have been compared with small and large texts that have been tokenized with NLTK's library;
-although, the results are not guaranteed to be the same because the Rust implementation 
-forgoes the usage of regexes, and instead prefers to use custom tokenizers internally.
+Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence 
+tokenization. Results have been compared with small and large texts that have 
+been tokenized with NLTK's library. 
 
 ## Usage
 
-The library allows you to train the tokenizer yourself or use pre-trained data.
+*For full examples, see rust-punkt/examples*
 
-To use pre-trained data from English texts (other languages available):
+The punkt algorithm allows you to derive all the necessary data to perform 
+sentence tokenization from the document itself. 
 
 ```rust
+let doc = "I bought $5.50 worth of apples from the store. I gave them to my dog when I came home.";
+let trainer: Trainer<Default> = Trainer::new();
+let mut data = TrainingData::new();
+
+trainer.train(doc, &mut data);
+
+for s in SentenceTokenizer::<Default>::new(doc, &data) {
+  println!("{:?}", s);
+}
 ```
 
-The paper describing the Punkt algorithm also states that the tokenizer can learn all of the 
-necessary information from the document it is tokenizing. 
-
-To emulate this behavior:
+`rust-punkt` also provides pretrained data that can be loaded for certain languages.
 
 ```rust
+let data = TrainingData::english();
+...
+```
+
+`rust-punkt` also allows training data to be incrementally gathered.
+
+```rust
+let trainer: Trainer<Default> = Trainer::new();
+let mut data = TrainingData::new();
+
+for d in docs.iter() {
+  trainer.train(d, &mut data);
+
+  for s in SentenceTokenizer::<Default>::new(d, &data) {
+    println!("{:?}", s);
+  }
+}
 ```
 
 ## Customization
 
+*For a full example, see rust-punkt/examples/custom-parameters.rs*
+
 `rust-punkt` exposes a number of traits to customize how the trainer, sentence tokenizer, 
 and internal tokenizers work. The default settings, which are nearly identical, to the 
 ones available in the Python library are available in `punkt::params::Default`.
+
+To modify only how the trainer works:
+
+```rust
+struct MyParams;
+
+impl DefaultCharacterDefinitions for MyParams { }
+
+impl TrainerParameters for MyParams {
+  ...
+}
+```
+
+To fully modify how everything works:
+
+```rust
+struct MyParams;
+
+impl DefinesSentenceEndings for MyParams { 
+  ...
+}
+
+impl DefinesInternalPunctuation for MyParams {
+  ...
+}
+
+impl DefinesNonWordCharacters for MyParams { 
+  ...
+}
+
+impl DefinesPunctuation for MyParams {
+  ...
+}
+
+impl DefinesNonPrefixCharacters for MyParams {
+  ...
+}
+
+impl TrainerParameters for MyParams {
+  ...
+}
+```
 
 ## Benchmarks
 
