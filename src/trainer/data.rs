@@ -1,3 +1,4 @@
+use std::ops::Deref;
 use std::hash::{Hasher, Hash};
 use std::str::FromStr;
 use std::default::Default;
@@ -9,52 +10,34 @@ use prelude::OrthographicContext;
 use rustc_serialize::json::Json;
 
 
-/// Internal object to store a string. Strings that are owned have 
-/// already been normalized. In order to check if a new string needs to 
-/// be allocated, case-insensitive hash and equality methods need to be 
-/// used.
+/// Internal object to store a string. Gives the ability to query
+/// for an owned string within a `HashMap` or `HashSet` using a 
+/// borrowed string.
 #[derive(Debug, Eq)] enum DataString<'a> {
-  NormalizedOwned(String),
-  UnnormalizedBorrowed(&'a str)
+  Owned(String),
+  Borrowed(&'a str)
 }
 
-impl<'a> PartialEq for DataString<'a> {
-  #[inline(always)] fn eq(&self, other: &DataString) -> bool {
-    fn normal_unnormal_eq(norm: &str, raw: &str) -> bool {
-      raw
-        .chars()
-        .flat_map(|c| c.to_lowercase())
-        .zip(norm.chars())
-        .fold(true, |acc, (c, c0)| acc && c == c0)
-    }
+impl<'a> Deref for DataString<'a> {
+  type Target = str;
 
+  #[inline(always)] fn deref(&self) -> &str {
     match self {
-      &NormalizedOwned(ref s) => match other {
-        &NormalizedOwned(ref s0) => s == s0,
-        &UnnormalizedBorrowed(ref s0) => normal_unnormal_eq(&s[..], s0)
-      },
-      &UnnormalizedBorrowed(ref s) => match other {
-        &NormalizedOwned(ref s0) => normal_unnormal_eq(&s0[..], s),
-        &UnnormalizedBorrowed(ref s0) => s0
-          .chars()
-          .flat_map(|c| c.to_lowercase())
-          .zip(s.chars().flat_map(|c| c.to_lowercase()))
-          .fold(true, |acc, (c, c0)| acc && c == c0)
-      }
+      &Owned(ref s) => &s[..],
+      &Borrowed(ref s) => s
     }
   }
 }
 
+impl<'a> PartialEq for DataString<'a> {
+  #[inline(always)] fn eq(&self, other: &DataString) -> bool {
+    let s: &str = &self; s == other.deref()
+  }
+}
+
 impl<'a> Hash for DataString<'a> {
-  fn hash<H>(&self, state: &mut H) where H : Hasher {
-    match self {
-      &NormalizedOwned(ref s) => {
-        for c in s.chars() { state.write_u32(c as u32) }
-      }
-      &UnnormalizedBorrowed(ref s) => {
-        for b in s.chars().flat_map(|c| c.to_lowercase()) { state.write_u32(b as u32) }
-      }
-    }
+  #[inline(always)] fn hash<H>(&self, state: &mut H) where H : Hasher {
+    let s: &str = &self; s.hash(state);
   }
 }
 
@@ -82,15 +65,20 @@ impl<'a> Hash for DataString<'a> {
 }
 
 impl<'a> TrainingData<'a> {
+  /// Creates a new, empty data object.
+  #[inline(always)] pub fn new() -> TrainingData<'a> {
+    TrainingData { ..Default::default() }
+  }
+
   /// Check if a token is considered to be an abbreviation.
   #[inline(always)] pub fn contains_abbrev(&self, tok: &str) -> bool {
-    self.abbrevs.contains(&UnnormalizedBorrowed(tok))
+    self.abbrevs.contains(&Borrowed(tok))
   }
 
   /// Insert a newly learned abbreviation.
   #[inline] pub fn insert_abbrev(&mut self, tok: &str) -> bool {
     if !self.contains_abbrev(tok) {
-      self.abbrevs.insert(NormalizedOwned(tok.to_lowercase()))
+      self.abbrevs.insert(Owned(tok.to_lowercase()))
     } else {
       false
     }
@@ -98,19 +86,19 @@ impl<'a> TrainingData<'a> {
 
   /// Removes a learned abbreviation.
   #[inline] pub fn remove_abbrev(&mut self, tok: &'a str) -> bool {
-    self.abbrevs.remove(&UnnormalizedBorrowed(tok))
+    self.abbrevs.remove(&Borrowed(tok))
   }
 
   /// Check if a token is considered to be a token that commonly starts a 
   /// sentence.
   #[inline(always)] pub fn contains_sentence_starter(&self, tok: &str) -> bool {
-    self.sentence_starters.contains(&UnnormalizedBorrowed(tok))
+    self.sentence_starters.contains(&Borrowed(tok))
   }
 
   /// Insert a newly learned word that signifies the start of a sentence.
   #[inline] pub fn insert_sentence_starter(&mut self, tok: &str) -> bool {
     if !self.contains_sentence_starter(tok) {
-      self.sentence_starters.insert(NormalizedOwned(tok.to_lowercase()))
+      self.sentence_starters.insert(Owned(tok.to_string()))
     } else {
       false
     }
@@ -120,30 +108,30 @@ impl<'a> TrainingData<'a> {
   #[inline] pub fn contains_collocation(&self, left: &str, right: &str) -> bool {
     self
       .collocations
-      .get(&UnnormalizedBorrowed(left))
-      .map(|s| s.contains(&UnnormalizedBorrowed(right)))
+      .get(&Borrowed(left))
+      .map(|s| s.contains(&Borrowed(right)))
       .unwrap_or(false)
   }
 
   /// Insert a newly learned pair of words that frequently appear together.
   pub fn insert_collocation(&mut self, left: &'a str, right: &str) -> bool {
-    if !self.collocations.contains_key(&UnnormalizedBorrowed(left)) {
+    if !self.collocations.contains_key(&Borrowed(left)) {
       self.collocations.insert(
-        NormalizedOwned(left.to_lowercase()), 
+        Owned(left.to_string()), 
         HashSet::new());
     }
 
     if !self
       .collocations
-      .get(&UnnormalizedBorrowed(left))
+      .get(&Borrowed(left))
       .unwrap()
-      .contains(&UnnormalizedBorrowed(right))
+      .contains(&Borrowed(right))
     {
       self
         .collocations
-        .get_mut(&UnnormalizedBorrowed(left))
+        .get_mut(&Borrowed(left))
         .unwrap()
-        .insert(NormalizedOwned(right.to_lowercase()));
+        .insert(Owned(right.to_string()));
       true
     } else {
       false
@@ -158,9 +146,8 @@ impl<'a> TrainingData<'a> {
     ctxt: OrthographicContext
   ) -> bool {
     // `get_mut` isn't allowed here, without adding an unnecessary lifetime
-    // qualifier to `tok`. This might be fixed by changing how 
-    // `UnnormalizedBorrow` works.
-    match self.orthographic_context.get(&UnnormalizedBorrowed(tok)) {
+    // qualifier to `tok`. 
+    match self.orthographic_context.get(&Borrowed(tok)) {
       Some(c) => unsafe { 
         *(c as *const OrthographicContext as *mut OrthographicContext) |= ctxt; 
         return false 
@@ -170,15 +157,15 @@ impl<'a> TrainingData<'a> {
 
     self
       .orthographic_context
-      .insert(NormalizedOwned(tok.to_lowercase()), ctxt);
+      .insert(Owned(tok.to_string()), ctxt);
 
     true
   }
 
   /// Gets the orthographic context for a token. Returns 0 if the token 
   /// was not yet encountered.
-  #[inline] pub fn get_orthographic_context(&self, tok: &str) -> u8 {
-    *self.orthographic_context.get(&UnnormalizedBorrowed(tok)).unwrap_or(&0)
+  #[inline(always)] pub fn get_orthographic_context(&self, tok: &str) -> u8 {
+    *self.orthographic_context.get(&Borrowed(tok)).unwrap_or(&0)
   }
 }
 
@@ -222,9 +209,9 @@ impl<'a> FromStr for TrainingData<'a> {
             (Some(Json::String(r)), Some(Json::String(l))) => 
               data
                 .collocations
-                .entry(NormalizedOwned(l))
+                .entry(Owned(l))
                 .or_insert(HashSet::new())
-                .insert(NormalizedOwned(r)),
+                .insert(Owned(r)),
             _ => return Err("failed to parse collocations section")
           };
         });
@@ -234,7 +221,7 @@ impl<'a> FromStr for TrainingData<'a> {
             for (k, ctxt) in obj.into_iter() {
               ctxt
                 .as_u64()
-                .map(|c| data.orthographic_context.insert(NormalizedOwned(k), c as u8)); 
+                .map(|c| data.orthographic_context.insert(Owned(k), c as u8)); 
             }
           }
           _ => return Err("failed to parse orthographic context section") 
@@ -290,15 +277,4 @@ preloaded_data!(turkish, "data/turkish.json");
   assert!(data.contains_sentence_starter("among"));
   assert!(data.contains_abbrev("w.va"));
   assert!(data.contains_collocation("##number##", "corrections"));
-}
-
-
-#[test] fn test_data_string_hash_eq() {
-  let mut set = HashSet::new();
-
-  set.insert(NormalizedOwned("abc".to_string()));
-  set.insert(NormalizedOwned("àáâãä".to_string()));
-
-  assert!(set.contains(&UnnormalizedBorrowed("AbC")));
-  assert!(set.contains(&UnnormalizedBorrowed("ÀÁÂÃÄ")));
 }

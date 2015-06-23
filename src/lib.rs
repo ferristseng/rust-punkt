@@ -10,14 +10,14 @@
 //! results. Data can be acquired manually by training with a `Trainer`, 
 //! or using already compiled data from NLTK (example: `TrainingData::english()`).
 //!
-//! # Customization
-//!
-//!
 //! # Typical Usage
 //!
 //!
+//! # Customization
+//!
+//!
 
-#![feature(plugin, str_char, collections, hash)]
+#![feature(plugin, str_char, collections)]
 #![allow(dead_code)]
 #![cfg_attr(test, feature(test, path_ext, fs_walk))]
 #![plugin(phf_macros)]

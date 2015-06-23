@@ -664,7 +664,9 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
   let cases = super::get_test_scenarios("test/sentence/", "test/raw/");
 
   for (expected, raw, file) in cases {
-    let mut data = TrainingData::english();
+    println!("  running sentencetok tests for {:?}", file);
+
+    let mut data = TrainingData::new();
 
     train_on_document(&mut data, &raw[..]);
 
@@ -733,7 +735,7 @@ macro_rules! bench_sentence_tokenizer(
       let doc = $doc;
 
       b.iter(|| {
-        let mut data = TrainingData::english();
+        let mut data = TrainingData::new();
 
         train_on_document(&mut data, doc);
 

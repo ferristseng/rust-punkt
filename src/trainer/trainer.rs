@@ -59,19 +59,19 @@ impl<P> Trainer<P>
   #[inline(always)] pub fn new() -> Trainer<P> { Trainer { params: PhantomData } }
 
   /// Train on a document. Does tokenization using a WordTokenizer.
-  pub fn train(self, doc: &str, data: &mut TrainingData) {
+  pub fn train(&self, doc: &str, data: &mut TrainingData) {
     let mut period_token_count: usize = 0;
     let mut sentence_break_count: usize = 0;
     let tokens: Vec<Token> = WordTokenizer::<P>::new(doc).collect();
     let mut type_fdist: FrequencyDistribution<&str> = FrequencyDistribution::new();
-    //let mut collocation_fdist = FrequencyDistribution::new();
-    //let mut sentence_starter_fdist = FrequencyDistribution::new();
+    let mut collocation_fdist = FrequencyDistribution::new();
+    let mut sentence_starter_fdist = FrequencyDistribution::new();
 
     for t in tokens.iter() {
       if t.has_final_period() { period_token_count += 1 }
       type_fdist.insert(t.typ());
     }
-    /*
+    
     // Iterate through to see if any tokens need to be reclassified as an 
     // abbreviation or removed as an abbreviation.
     {
@@ -159,20 +159,37 @@ impl<P> Trainer<P>
     }
 
     {
-      let ss_iter: PotentialSentenceStartersIterator<_, P> = 
-        PotentialSentenceStartersIterator {
-          iter: sentence_starter_fdist.keys(),
-          sentence_break_count: sentence_break_count,
-          type_fdist: &type_fdist,
-          sentence_starter_fdist: &sentence_starter_fdist,
-          params: PhantomData
-        };
+      let ss_iter: PotentialSentenceStartersIterator<_, P> = PotentialSentenceStartersIterator {
+        iter: sentence_starter_fdist.keys(),
+        sentence_break_count: sentence_break_count,
+        type_fdist: &type_fdist,
+        sentence_starter_fdist: &sentence_starter_fdist,
+        params: PhantomData
+      };
 
       for (tok, _) in ss_iter {
         data.insert_sentence_starter(tok.typ());
       }
     }
-    */
+
+    {
+      let clc_iter: PotentialCollocationsIterator<_, P> = PotentialCollocationsIterator {
+        iter: collocation_fdist.keys(),
+        data: &data,
+        type_fdist: &type_fdist,
+        collocation_fdist: &collocation_fdist,
+        params: PhantomData
+      };
+
+      for (col, _) in clc_iter {
+        unsafe {
+          (&mut *(data as *const TrainingData as *mut TrainingData))
+            .insert_collocation(
+              col.left().typ_without_period(), 
+              col.right().typ_without_break_or_period());
+        }
+      }
+    }
   }
 }
 
@@ -509,7 +526,7 @@ macro_rules! bench_trainer(
   ($name:ident, $doc:expr) => (
     #[bench] fn $name(b: &mut ::test::Bencher) {
       b.iter(|| {
-        let mut data = TrainingData::english();
+        let mut data = TrainingData::new();
         let trainer: Trainer<::prelude::Default> = Trainer::new();
 
         trainer.train($doc, &mut data);
