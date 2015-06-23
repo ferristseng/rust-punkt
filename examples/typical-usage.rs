@@ -48,5 +48,7 @@ fn main() {
     }
   }
 
+  println!("\nIs 'u.s' an abbreviation? : {:?}", data.contains_abbrev("u.s"));
+
   assert!(data.contains_abbrev("u.s"));
 }

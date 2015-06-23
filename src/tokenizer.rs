@@ -65,35 +65,37 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
   where P : DefinesNonWordCharacters + DefinesSentenceEndings
 {
   // (Entire slice of section, beginning of next break (if there is one),
-  // start of whitespace before next token, end of entire slice)
-  type Item = (&'a str, usize, usize, usize);
+  // start of whitespace before next token, end of entire slice,
+  // number of bytes of the last character)
+  type Item = (&'a str, usize, usize, usize, usize);
 
-  fn next(&mut self) -> Option<(&'a str, usize, usize, usize)> {
+  fn next(&mut self) -> Option<(&'a str, usize, usize, usize, usize)> {
     let mut astart = self.pos;
     let mut wstart = self.pos;
     let mut nstart = self.pos;
     let mut state: u8 = 0;
 
-    macro_rules! return_token(
-      () => (
-        {
-          let end = self.pos;
-
-          // Return to the start of a any next token that occured 
-          // with a sentence ending.
-          if state & STATE_UPDT_RET != 0 { self.pos = nstart; }
-
-          return Some((
-            &self.doc[astart..end],
-            nstart,
-            wstart,
-            end));
-        }
-      )
-    );
-
     while self.pos < self.doc.len() {
       let cur = self.doc.char_at(self.pos);
+
+      macro_rules! return_token(
+        () => (
+          {
+            let end = self.pos;
+
+            // Return to the start of a any next token that occured 
+            // with a sentence ending.
+            if state & STATE_UPDT_RET != 0 { self.pos = nstart; }
+
+            return Some((
+              &self.doc[astart..end],
+              nstart,
+              wstart,
+              end,
+              cur.len_utf8()));
+          }
+        )
+      );
 
       match cur {
         // A sentence ending was encountered. Set the appropriate state.
@@ -373,7 +375,7 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
   type Item = (usize, usize); 
 
   fn next(&mut self) -> Option<(usize, usize)> {
-    while let Some((slice, tok_start, ws_start, slice_end)) = self.iter.next() {
+    while let Some((slice, tok_start, ws_start, slice_end, len)) = self.iter.next() {
       let mut prv = None;
       let mut has_sentence_break = false;
 
@@ -408,8 +410,8 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
         let start = self.last;
 
         return if tok_start == slice_end {
-          self.last = slice_end - 1;
-          Some((start, slice_end - 1))
+          self.last = slice_end - len; 
+          Some((start, self.last))
         } else {
           self.last = tok_start;
           Some((start, ws_start))
@@ -612,7 +614,7 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
     println!("  running periodctxt tests for '{:?}'", file);
 
-    for ((t, _, _, _), e) in iter.zip(expected) {
+    for ((t, _, _, _, _), e) in iter.zip(expected) {
       let t = t.replace("\n", r"\n").replace("\r", "");
       let e = e.replace("\r", "");
 
