@@ -7,7 +7,7 @@ use punkt::params::{Default};
 fn main() {
   let docs = [
     "This is sentence one. This is sentence two.",
-    "The U.S is a great country.",
+    "The U.S. is a great country.",
     "I bought $5.50 worth of apples from the store. I gave them to my dog when I came home."
   ];
 
@@ -47,4 +47,6 @@ fn main() {
       println!("{:?}", s);
     }
   }
+
+  assert!(data.contains_abbrev("u.s"));
 }
