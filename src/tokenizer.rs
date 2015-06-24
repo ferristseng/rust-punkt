@@ -330,10 +330,12 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
 
 /// Iterator over the byte offsets of a document.
 ///
-/// ```
-/// use punkt::{SentenceByteOffsetTokenizer, TrainingData};
-/// use punkt::params::Default;
+/// # Examples
 ///
+/// ```
+/// # use punkt::{SentenceByteOffsetTokenizer, TrainingData};
+/// # use punkt::params::Default;
+/// # 
 /// let doc = "this is a great sentence! this is a sad sentence.";
 /// let data = TrainingData::english();
 ///
@@ -433,10 +435,12 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
 
 /// Iterator over the sentence slices of a document.
 ///
-/// ```
-/// use punkt::{SentenceTokenizer, TrainingData};
-/// use punkt::params::Default;
+/// # Examples
 ///
+/// ```
+/// # use punkt::{SentenceTokenizer, TrainingData};
+/// # use punkt::params::Default;
+/// #
 /// let doc = "this is a great sentence! this is a sad sentence.";
 /// let data = TrainingData::english();
 ///

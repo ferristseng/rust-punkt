@@ -4,7 +4,6 @@
 extern crate phf;
 extern crate punkt;
 
-use phf::Set;
 use punkt::params::*;
 use punkt::{SentenceTokenizer, Trainer, TrainingData};
 

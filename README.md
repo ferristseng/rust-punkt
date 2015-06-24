@@ -5,7 +5,7 @@
 
 Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence 
 tokenization. Results have been compared with small and large texts that have 
-been tokenized with NLTK's library. 
+been tokenized using NLTK. 
 
 ## Usage
 

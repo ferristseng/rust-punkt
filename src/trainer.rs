@@ -89,8 +89,8 @@ impl<'a> Hash for DataString<'a> {
 /// Precompiled data can be loaded via a language specific constructor.
 ///
 /// ```
-/// use punkt::TrainingData;
-///
+/// # use punkt::TrainingData;
+/// #
 /// let eng_data = TrainingData::english();
 /// let ger_data = TrainingData::german();
 ///
@@ -422,42 +422,6 @@ impl<P> Trainer<P>
   }
 }
 
-/*
-  /// Empties the trained data, and compiles it with mutably borrow training data. 
-  /// Afterwards, the trainer should be dropped (suggested), although finalizing 
-  /// could theoretically could occur between each training stage. 
-  pub fn finalize(&mut self) {
-    // This method does a lot of `unsafe` things that are actually safe. The issue 
-    // is it requires borrow `self` mutably to create the iterators, and to 
-    // modify the internal data object. Since these two things are completely 
-    // separate, these `unsafe` blocks should be safe.
-
-    self.data.clear_sentence_starters();
-
-    for (tok, _) 
-    in potential_sentence_starter_iter(
-      self, 
-      self.sentence_starter_fdist.keys())
-    {
-      unsafe {
-        self.borrow_data_mut_unsafe().insert_sentence_starter(tok.typ());
-      }
-    }
-    for (col, _)
-    in potential_collocation_iter(
-      self,
-      self.collocation_fdist.keys())
-    {
-      unsafe {
-        self.borrow_data_mut_unsafe().insert_collocation(
-          col.left().deref().typ_without_period(), 
-          col.right().deref().typ_without_break_or_period());
-      }
-    }
-  }
-}
-*/
-
 
 fn is_rare_abbrev_type<P>(
   data: &TrainingData,
@@ -755,8 +719,7 @@ impl<'a, T : 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I>
 macro_rules! preloaded_data(
   ($lang:ident, $file:expr) => (
     impl<'a> TrainingData<'a> {
-      /// Default data for $lang.
-      #[inline] pub fn $lang() -> TrainingData<'a> {
+      #[inline] #[allow(missing_docs)] pub fn $lang() -> TrainingData<'a> {
         FromStr::from_str(include_str!($file)).unwrap()
       }
     }

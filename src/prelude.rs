@@ -1,5 +1,8 @@
-use phf::Set;
-use phf::Map;
+use phf;
+
+
+/// Type for character sets.
+pub type Set<T> = phf::Set<T>;
 
 
 /// Defines a set of punctuation that can end a sentence.
@@ -193,7 +196,7 @@ pub const ORT_LC: OrthographicContext = BEG_LC | MID_LC | UNK_LC;
 /// to an OrthographicConstant describing orthographic attributes about the 
 /// token. The chars (in ASCII) map to the result of ORing the byte 
 /// representation of an OrthographyPosition and LetterCase together.
-pub static ORTHO_MAP: Map<u8, OrthographicContext> = phf_map! {
+pub static ORTHO_MAP: phf::Map<u8, OrthographicContext> = phf_map! {
   b'B' => BEG_UC, // 66
   b'"' => MID_UC, // 34
   b'b' => UNK_UC, // 98
