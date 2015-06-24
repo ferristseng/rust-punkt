@@ -125,8 +125,7 @@
 //! }
 //! ```
 
-#![feature(plugin, str_char, collections)]
-#![allow(dead_code)]
+#![feature(plugin, str_char)]
 #![cfg_attr(test, feature(test, path_ext, fs_walk))]
 #![plugin(phf_macros)]
 #![warn(missing_docs)]
