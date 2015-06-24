@@ -108,6 +108,18 @@ Specs of my machine:
   * SSD
 
 ```
+test tokenizer::bench_sentence_tokenizer_train_on_document_long   ... bench: 129,877,668 ns/iter (+/- 6,935,294)
+test tokenizer::bench_sentence_tokenizer_train_on_document_medium ... bench:     901,867 ns/iter (+/- 12,984)
+test tokenizer::bench_sentence_tokenizer_train_on_document_short  ... bench:     702,976 ns/iter (+/- 13,554)
+test tokenizer::word_tokenizer_bench_long                         ... bench:  14,897,528 ns/iter (+/- 689,138)
+test tokenizer::word_tokenizer_bench_medium                       ... bench:     339,535 ns/iter (+/- 21,692)
+test tokenizer::word_tokenizer_bench_short                        ... bench:     281,293 ns/iter (+/- 3,256)
+test tokenizer::word_tokenizer_bench_very_long                    ... bench:  54,256,241 ns/iter (+/- 1,210,575)
+test trainer::bench_trainer_long                                  ... bench:  27,674,731 ns/iter (+/- 550,338)
+test trainer::bench_trainer_medium                                ... bench:     681,222 ns/iter (+/- 31,713)
+test trainer::bench_trainer_short                                 ... bench:     527,203 ns/iter (+/- 11,354)
+test trainer::bench_trainer_very_long                             ... bench:  98,221,585 ns/iter (+/- 5,297,733)
+
 ```
 
 Python results for sentence tokenization, and training on the document (the first 3 tests mirrored from above):
@@ -128,4 +140,7 @@ print(timed / tests)
 ```
 
 ```
+long    - 1.3414202709775418 s   = 1.34142 x 10^9 ns ~ 10.3283365927x improvement 
+medium  - 0.007250561956316233 s = 7.25056 x 10^6 ns ~ 8.03950245027x improvement
+short   - 0.005532620595768094 s = 5.53262 x 10^6 ns ~ 7.870283759x   improvement
 ```

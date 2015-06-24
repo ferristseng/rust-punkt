@@ -8,7 +8,6 @@ use std::collections::{HashSet, HashMap};
 
 use num::Float;
 use freqdist::FrequencyDistribution;
-use freqdist::Distribution;
 use rustc_serialize::json::Json;
 
 use self::DataString::*;
