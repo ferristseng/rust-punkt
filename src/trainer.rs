@@ -1,6 +1,8 @@
 use std::cmp::min;
 use std::ops::Deref;
 use std::str::FromStr;
+use std::borrow::Cow;
+use std::borrow::Cow::*;
 use std::default::Default;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -10,7 +12,6 @@ use num::Float;
 use freqdist::FrequencyDistribution;
 use rustc_serialize::json::Json;
 
-use self::DataString::*;
 use util;
 use token::Token;
 use tokenizer::WordTokenizer;
@@ -49,38 +50,6 @@ impl<T> PartialEq for Collocation<T> where T : Deref<Target = Token>  {
 }
 
 
-/// Internal object to store a string. Gives the ability to query
-/// for an owned string within a `HashMap` or `HashSet` using a 
-/// borrowed string.
-#[derive(Debug, Eq)] enum DataString<'a> {
-  Owned(String),
-  Borrowed(&'a str)
-}
-
-impl<'a> Deref for DataString<'a> {
-  type Target = str;
-
-  #[inline(always)] fn deref(&self) -> &str {
-    match self {
-      &Owned(ref s) => &s[..],
-      &Borrowed(ref s) => s
-    }
-  }
-}
-
-impl<'a> PartialEq for DataString<'a> {
-  #[inline(always)] fn eq(&self, other: &DataString) -> bool {
-    let s: &str = &self; s == other.deref()
-  }
-}
-
-impl<'a> Hash for DataString<'a> {
-  #[inline(always)] fn hash<H>(&self, state: &mut H) where H : Hasher {
-    let s: &str = &self; s.hash(state);
-  }
-}
-
-
 /// Stores data that was obtained during training. 
 ///
 /// # Examples
@@ -97,10 +66,10 @@ impl<'a> Hash for DataString<'a> {
 /// assert!(ger_data.contains_abbrev("crz"));
 /// ``` 
 #[derive(Debug, Default)] pub struct TrainingData<'a> {
-  abbrevs: HashSet<DataString<'a>>,
-  collocations: HashMap<DataString<'a>, HashSet<DataString<'a>>>,
-  sentence_starters: HashSet<DataString<'a>>,
-  orthographic_context: HashMap<DataString<'a>, OrthographicContext>
+  abbrevs: HashSet<Cow<'a, str>>,
+  collocations: HashMap<Cow<'a, str>, HashSet<Cow<'a, str>>>,
+  sentence_starters: HashSet<Cow<'a, str>>,
+  orthographic_context: HashMap<Cow<'a, str>, OrthographicContext>
 }
 
 impl<'a> TrainingData<'a> {
