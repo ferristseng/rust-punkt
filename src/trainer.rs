@@ -1,8 +1,6 @@
 use std::cmp::min;
 use std::ops::Deref;
 use std::str::FromStr;
-use std::borrow::Cow;
-use std::borrow::Cow::*;
 use std::default::Default;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
@@ -65,48 +63,48 @@ impl<T> PartialEq for Collocation<T> where T : Deref<Target = Token>  {
 /// assert!(eng_data.contains_abbrev("va"));
 /// assert!(ger_data.contains_abbrev("crz"));
 /// ``` 
-#[derive(Debug, Default)] pub struct TrainingData<'a> {
-  abbrevs: HashSet<Cow<'a, str>>,
-  collocations: HashMap<Cow<'a, str>, HashSet<Cow<'a, str>>>,
-  sentence_starters: HashSet<Cow<'a, str>>,
-  orthographic_context: HashMap<Cow<'a, str>, OrthographicContext>
+#[derive(Debug, Default)] pub struct TrainingData {
+  abbrevs: HashSet<String>,
+  collocations: HashMap<String, HashSet<String>>,
+  sentence_starters: HashSet<String>,
+  orthographic_context: HashMap<String, OrthographicContext>
 }
 
-impl<'a> TrainingData<'a> {
+impl TrainingData {
   /// Creates a new, empty data object.
-  #[inline(always)] pub fn new() -> TrainingData<'a> {
+  #[inline(always)] pub fn new() -> TrainingData {
     TrainingData { ..Default::default() }
   }
 
   /// Check if a token is considered to be an abbreviation.
   #[inline(always)] pub fn contains_abbrev(&self, tok: &str) -> bool {
-    self.abbrevs.contains(&Borrowed(tok))
+    self.abbrevs.contains(tok)
   }
 
   /// Insert a newly learned abbreviation.
   #[inline] fn insert_abbrev(&mut self, tok: &str) -> bool {
     if !self.contains_abbrev(tok) {
-      self.abbrevs.insert(Owned(tok.to_lowercase()))
+      self.abbrevs.insert(tok.to_lowercase())
     } else {
       false
     }
   }
 
   /// Removes a learned abbreviation.
-  #[inline] fn remove_abbrev(&mut self, tok: &'a str) -> bool {
-    self.abbrevs.remove(&Borrowed(tok))
+  #[inline] fn remove_abbrev(&mut self, tok: &str) -> bool {
+    self.abbrevs.remove(tok)
   }
 
   /// Check if a token is considered to be a token that commonly starts a 
   /// sentence.
   #[inline(always)] pub fn contains_sentence_starter(&self, tok: &str) -> bool {
-    self.sentence_starters.contains(&Borrowed(tok))
+    self.sentence_starters.contains(tok)
   }
 
   /// Insert a newly learned word that signifies the start of a sentence.
   #[inline] fn insert_sentence_starter(&mut self, tok: &str) -> bool {
     if !self.contains_sentence_starter(tok) {
-      self.sentence_starters.insert(Owned(tok.to_string()))
+      self.sentence_starters.insert(tok.to_string())
     } else {
       false
     }
@@ -116,30 +114,23 @@ impl<'a> TrainingData<'a> {
   #[inline] pub fn contains_collocation(&self, left: &str, right: &str) -> bool {
     self
       .collocations
-      .get(&Borrowed(left))
-      .map(|s| s.contains(&Borrowed(right)))
+      .get(left)
+      .map(|s| s.contains(right))
       .unwrap_or(false)
   }
 
   /// Insert a newly learned pair of words that frequently appear together.
-  fn insert_collocation(&mut self, left: &'a str, right: &str) -> bool {
-    if !self.collocations.contains_key(&Borrowed(left)) {
-      self.collocations.insert(
-        Owned(left.to_string()), 
-        HashSet::new());
+  fn insert_collocation(&mut self, left: &str, right: &str) -> bool {
+    if !self.collocations.contains_key(left) {
+      self.collocations.insert(left.to_string(), HashSet::new());
     }
 
-    if !self
-      .collocations
-      .get(&Borrowed(left))
-      .unwrap()
-      .contains(&Borrowed(right))
-    {
+    if !self.collocations.get(left).unwrap().contains(right) {
       self
         .collocations
-        .get_mut(&Borrowed(left))
+        .get_mut(left)
         .unwrap()
-        .insert(Owned(right.to_string()));
+        .insert(right.to_string());
       true
     } else {
       false
@@ -155,33 +146,27 @@ impl<'a> TrainingData<'a> {
   ) -> bool {
     // `get_mut` isn't allowed here, without adding an unnecessary lifetime
     // qualifier to `tok`. 
-    match self.orthographic_context.get(&Borrowed(tok)) {
-      Some(c) => unsafe { 
-        *(c as *const OrthographicContext as *mut OrthographicContext) |= ctxt; 
-        return false 
-      },
+    match self.orthographic_context.get_mut(tok) {
+      Some(c) => { *c |= ctxt; return false },
       None => () 
     }
 
-    self
-      .orthographic_context
-      .insert(Owned(tok.to_string()), ctxt);
-
+    self.orthographic_context.insert(tok.to_string(), ctxt);
     true
   }
 
   /// Gets the orthographic context for a token. Returns 0 if the token 
   /// was not yet encountered.
   #[inline(always)] pub fn get_orthographic_context(&self, tok: &str) -> u8 {
-    *self.orthographic_context.get(&Borrowed(tok)).unwrap_or(&0)
+    *self.orthographic_context.get(tok).unwrap_or(&0)
   }
 }
 
-impl<'a> FromStr for TrainingData<'a> {
+impl FromStr for TrainingData {
   type Err = &'static str; 
 
   /// Deserializes JSON and loads the data into a new TrainingData object.
-  fn from_str(s: &str) -> Result<TrainingData<'a>, &'static str> { 
+  fn from_str(s: &str) -> Result<TrainingData, &'static str> { 
     match Json::from_str(s) {
       Ok(Json::Object(mut obj)) => {
         let mut data: TrainingData = Default::default();
@@ -217,9 +202,9 @@ impl<'a> FromStr for TrainingData<'a> {
             (Some(Json::String(r)), Some(Json::String(l))) => 
               data
                 .collocations
-                .entry(Owned(l))
+                .entry(l)
                 .or_insert(HashSet::new())
-                .insert(Owned(r)),
+                .insert(r),
             _ => return Err("failed to parse collocations section")
           };
         });
@@ -229,7 +214,7 @@ impl<'a> FromStr for TrainingData<'a> {
             for (k, ctxt) in obj.into_iter() {
               ctxt
                 .as_u64()
-                .map(|c| data.orthographic_context.insert(Owned(k), c as u8)); 
+                .map(|c| data.orthographic_context.insert(k, c as u8)); 
             }
           }
           _ => return Err("failed to parse orthographic context section") 
@@ -450,7 +435,7 @@ fn is_rare_abbrev_type<P>(
 /// score of that token.
 struct ReclassifyIterator<'b, I, P> {
   iter: I,
-  data: &'b TrainingData<'b>,
+  data: &'b TrainingData,
   period_token_count: usize,
   type_fdist: &'b FrequencyDistribution<&'b str>,
   params: PhantomData<P>
@@ -556,7 +541,7 @@ impl<'a, I> Iterator for TokenWithContextIterator<I>
 
 struct PotentialCollocationsIterator<'b, I, P> {
   iter: I,
-  data: &'b TrainingData<'b>,
+  data: &'b TrainingData,
   type_fdist: &'b FrequencyDistribution<&'b str>,
   collocation_fdist: &'b FrequencyDistribution<Collocation<&'b Token>>,
   params: PhantomData<P>
@@ -686,8 +671,8 @@ impl<'a, T : 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I>
 // Macro for generating functions to load precompiled data.
 macro_rules! preloaded_data(
   ($lang:ident, $file:expr) => (
-    impl<'a> TrainingData<'a> {
-      #[inline] #[allow(missing_docs)] pub fn $lang() -> TrainingData<'a> {
+    impl TrainingData {
+      #[inline] #[allow(missing_docs)] pub fn $lang() -> TrainingData {
         FromStr::from_str(include_str!($file)).unwrap()
       }
     }

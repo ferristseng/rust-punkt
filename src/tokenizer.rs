@@ -345,7 +345,7 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
 /// ```
 pub struct SentenceByteOffsetTokenizer<'a, P> {
   doc: &'a str,
-  data: &'a TrainingData<'a>,
+  data: &'a TrainingData,
   iter: PeriodContextTokenizer<'a, P>,
   last: usize,
   params: PhantomData<P>
@@ -358,7 +358,7 @@ impl<'a, P> SentenceByteOffsetTokenizer<'a, P>
   /// Creates a new `SentenceByteOffsetTokenizer`.
   #[inline(always)] pub fn new(
     doc: &'a str, 
-    data: &'a TrainingData<'a>
+    data: &'a TrainingData
   ) -> SentenceByteOffsetTokenizer<'a, P> {
     SentenceByteOffsetTokenizer {
       doc: doc,
@@ -461,7 +461,7 @@ impl<'a, P> SentenceTokenizer<'a, P>
   /// Creates a new `SentenceTokenizer`.
   #[inline(always)] pub fn new(
     doc: &'a str, 
-    data: &'a TrainingData<'a>
+    data: &'a TrainingData
   ) -> SentenceTokenizer<'a, P> {
     SentenceTokenizer {
       doc: doc,
