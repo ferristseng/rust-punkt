@@ -334,12 +334,12 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
 ///
 /// ```
 /// # use punkt::{SentenceByteOffsetTokenizer, TrainingData};
-/// # use punkt::params::Default;
+/// # use punkt::params::Standard;
 /// # 
 /// let doc = "this is a great sentence! this is a sad sentence.";
 /// let data = TrainingData::english();
 ///
-/// for (start, end) in SentenceByteOffsetTokenizer::<Default>::new(doc, &data) {
+/// for (start, end) in SentenceByteOffsetTokenizer::<Standard>::new(doc, &data) {
 ///   println!("{:?}", &doc[start..end]); 
 /// } 
 /// ```
@@ -439,12 +439,12 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
 ///
 /// ```
 /// # use punkt::{SentenceTokenizer, TrainingData};
-/// # use punkt::params::Default;
+/// # use punkt::params::Standard;
 /// #
 /// let doc = "this is a great sentence! this is a sad sentence.";
 /// let data = TrainingData::english();
 ///
-/// for sent in SentenceTokenizer::<Default>::new(doc, &data) {
+/// for sent in SentenceTokenizer::<Standard>::new(doc, &data) {
 ///   println!("{:?}", sent); 
 /// } 
 /// ```
@@ -610,11 +610,11 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
 #[test] fn periodctxt_tokenizer_compare_nltk() {
   use std::iter::Iterator;
-  use prelude::Default;
+  use prelude::Standard;
 
   for (expected, raw, file) 
   in super::get_test_scenarios("test/word-periodctxt/", "test/raw/") {
-    let iter: PeriodContextTokenizer<Default> = PeriodContextTokenizer::new(&raw[..]);
+    let iter: PeriodContextTokenizer<Standard> = PeriodContextTokenizer::new(&raw[..]);
 
     println!("  running periodctxt tests for '{:?}'", file);
 
@@ -638,11 +638,11 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
 
 #[test] fn word_tokenizer_compare_nltk() {
-  use prelude::Default;
+  use prelude::Standard;
 
   for (expected, raw, file) 
   in super::get_test_scenarios("test/word-training", "test/raw/") {
-    let iter: WordTokenizer<Default> = WordTokenizer::new(&raw[..]);
+    let iter: WordTokenizer<Standard> = WordTokenizer::new(&raw[..]);
 
     println!("  running wordtok tests for {:?}", file);
 
@@ -661,7 +661,7 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 #[cfg(test)] fn train_on_document(data: &mut TrainingData, doc: &str) {
   use trainer::Trainer;
 
-  let trainer: Trainer<::prelude::Default> = Trainer::new();
+  let trainer: Trainer<::prelude::Standard> = Trainer::new();
   trainer.train(&doc, data);
 }
 
@@ -676,7 +676,7 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
     train_on_document(&mut data, &raw[..]);
 
-    let iter: SentenceTokenizer<::prelude::Default> = 
+    let iter: SentenceTokenizer<::prelude::Standard> = 
       SentenceTokenizer::new(&raw[..], &data);
     
     for (t, e) in iter.zip(expected.iter()) {
@@ -700,7 +700,7 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 #[test] fn sentence_tokenizer_issue_5_test() {
   let data = TrainingData::english();
   let doc = "this is a great sentence! this is a sad sentence.";
-  let mut iter = SentenceTokenizer::<::params::Default>::new(doc, &data);
+  let mut iter = SentenceTokenizer::<::params::Standard>::new(doc, &data);
 
   assert_eq!(iter.next().unwrap(), "this is a great sentence!");
   assert_eq!(iter.next().unwrap(), "this is a sad sentence.");
@@ -711,7 +711,7 @@ macro_rules! bench_word_tokenizer(
   ($name:ident, $doc:expr) => (
     #[bench] fn $name(b: &mut ::test::Bencher) {
       b.iter(|| {
-        let t: WordTokenizer<::prelude::Default> = WordTokenizer::new($doc);
+        let t: WordTokenizer<::prelude::Standard> = WordTokenizer::new($doc);
         let _: Vec<Token> = t.collect();
       })
     }
@@ -745,7 +745,7 @@ macro_rules! bench_sentence_tokenizer(
 
         train_on_document(&mut data, doc);
 
-        let iter: SentenceTokenizer<::prelude::Default> = 
+        let iter: SentenceTokenizer<::prelude::Standard> = 
           SentenceTokenizer::new(doc, &mut data);
         let _: Vec<&str> = iter.collect();
       })

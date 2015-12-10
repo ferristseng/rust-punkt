@@ -16,12 +16,12 @@ sentence tokenization from the document itself.
 
 ```rust
 let doc = "I bought $5.50 worth of apples from the store. I gave them to my dog when I came home.";
-let trainer: Trainer<Default> = Trainer::new();
+let trainer: Trainer<Standard> = Trainer::new();
 let mut data = TrainingData::new();
 
 trainer.train(doc, &mut data);
 
-for s in SentenceTokenizer::<Default>::new(doc, &data) {
+for s in SentenceTokenizer::<Standard>::new(doc, &data) {
   println!("{:?}", s);
 }
 ```
@@ -36,13 +36,13 @@ let data = TrainingData::english();
 `rust-punkt` also allows training data to be incrementally gathered.
 
 ```rust
-let trainer: Trainer<Default> = Trainer::new();
+let trainer: Trainer<Standard> = Trainer::new();
 let mut data = TrainingData::new();
 
 for d in docs.iter() {
   trainer.train(d, &mut data);
 
-  for s in SentenceTokenizer::<Default>::new(d, &data) {
+  for s in SentenceTokenizer::<Standard>::new(d, &data) {
     println!("{:?}", s);
   }
 }
@@ -54,7 +54,7 @@ for d in docs.iter() {
 
 `rust-punkt` exposes a number of traits to customize how the trainer, sentence tokenizer, 
 and internal tokenizers work. The default settings, which are nearly identical, to the 
-ones available in the Python library are available in `punkt::params::Default`.
+ones available in the Python library are available in `punkt::params::Standard`.
 
 To modify only how the trainer works:
 

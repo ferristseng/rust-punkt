@@ -717,7 +717,7 @@ macro_rules! bench_trainer(
     #[bench] fn $name(b: &mut ::test::Bencher) {
       b.iter(|| {
         let mut data = TrainingData::new();
-        let trainer: Trainer<::prelude::Default> = Trainer::new();
+        let trainer: Trainer<::prelude::Standard> = Trainer::new();
 
         trainer.train($doc, &mut data);
       })

@@ -16,16 +16,16 @@
 //! sentence tokenization from the document itself. 
 //!
 //! ```
-//! # use punkt::params::Default;
+//! # use punkt::params::Standard;
 //! # use punkt::{Trainer, TrainingData, SentenceTokenizer};
 //! # 
 //! # let doc = "I bought $5.50 worth of apples from the store. I gave them to my dog when I came home.";
-//! let trainer: Trainer<Default> = Trainer::new();
+//! let trainer: Trainer<Standard> = Trainer::new();
 //! let mut data = TrainingData::new();
 //! 
 //! trainer.train(doc, &mut data);
 //! 
-//! for s in SentenceTokenizer::<Default>::new(doc, &data) {
+//! for s in SentenceTokenizer::<Standard>::new(doc, &data) {
 //!   println!("{:?}", s);
 //! }
 //! ```
@@ -43,17 +43,17 @@
 //! `rust-punkt` also allows training data to be incrementally gathered.
 //!
 //! ```
-//! # use punkt::params::Default;
+//! # use punkt::params::Standard;
 //! # use punkt::{Trainer, TrainingData, SentenceTokenizer};
 //! #
 //! # let docs = ["This is a sentence with a abbrev. in it."];
-//! let trainer: Trainer<Default> = Trainer::new();
+//! let trainer: Trainer<Standard> = Trainer::new();
 //! let mut data = TrainingData::new();
 //! 
 //! for d in docs.iter() {
 //!   trainer.train(d, &mut data);
 //!
-//!   for s in SentenceTokenizer::<Default>::new(d, &data) {
+//!   for s in SentenceTokenizer::<Standard>::new(d, &data) {
 //!     println!("{:?}", s);
 //!   }
 //! }
@@ -63,7 +63,7 @@
 //!
 //! `rust-punkt` exposes a number of traits to customize how the trainer, sentence tokenizer, 
 //! and internal tokenizers work. The default settings, which are nearly identical, to the 
-//! ones available in the Python library are available in `punkt::params::Default`.
+//! ones available in the Python library are available in `punkt::params::Standard`.
 //! 
 //! To modify only how the trainer works:
 //! 
@@ -94,23 +94,23 @@
 //! struct MyParams;
 //! 
 //! impl DefinesSentenceEndings for MyParams { 
-//! # fn sentence_endings() -> &'static Set<char> { Default::sentence_endings() }
+//! # fn sentence_endings() -> &'static Set<char> { Standard::sentence_endings() }
 //! }
 //! 
 //! impl DefinesInternalPunctuation for MyParams {
-//! # fn internal_punctuation() -> &'static Set<char> { Default::sentence_endings() }
+//! # fn internal_punctuation() -> &'static Set<char> { Standard::sentence_endings() }
 //! }
 //!
 //! impl DefinesNonWordCharacters for MyParams { 
-//! # fn nonword_chars() -> &'static Set<char> { Default::nonword_chars() } 
+//! # fn nonword_chars() -> &'static Set<char> { Standard::nonword_chars() } 
 //! }
 //! 
 //! impl DefinesPunctuation for MyParams {
-//! # fn punctuation() -> &'static Set<char> { Default::punctuation() }
+//! # fn punctuation() -> &'static Set<char> { Standard::punctuation() }
 //! }
 //!
 //! impl DefinesNonPrefixCharacters for MyParams {
-//! # fn nonprefix_chars() -> &'static Set<char> { Default::nonprefix_chars() }
+//! # fn nonprefix_chars() -> &'static Set<char> { Standard::nonprefix_chars() }
 //! }
 //! 
 //! impl TrainerParameters for MyParams {
@@ -126,7 +126,7 @@
 //! ```
 
 #![feature(plugin, str_char)]
-#![cfg_attr(test, feature(test, path_ext, fs_walk))]
+#![cfg_attr(test, feature(test))]
 #![plugin(phf_macros)]
 #![warn(missing_docs)]
 
@@ -134,6 +134,7 @@ extern crate phf;
 extern crate num;
 extern crate rustc_serialize;
 extern crate freqdist;
+#[cfg(test)] extern crate walkdir;
 #[cfg(test)] extern crate test;
 
 mod trainer;
@@ -150,7 +151,7 @@ pub use tokenizer::{SentenceTokenizer, SentenceByteOffsetTokenizer};
 pub mod params {
   pub use prelude::{DefinesSentenceEndings, DefinesInternalPunctuation, 
     DefinesNonWordCharacters, DefinesPunctuation, DefinesNonPrefixCharacters,
-    TrainerParameters, DefaultCharacterDefinitions, Default, Set};
+    TrainerParameters, DefaultCharacterDefinitions, Standard, Set};
 }
 
 
@@ -161,14 +162,16 @@ pub mod params {
   #![allow(unused_must_use)]
   
   use std::fs;
-  use std::fs::PathExt;
   use std::path::Path;
   use std::io::Read;
 
+  use walkdir::WalkDir;
+
   let mut tests = Vec::new();
 
-  for path in fs::walk_dir(&Path::new(dir_path)).unwrap() {
-    let fpath = path.unwrap().path();
+  for path in WalkDir::new(dir_path) {
+    let entry = path.unwrap();
+    let fpath = entry.path();
 
     if fpath.is_file() {
       let mut exp_strb = String::new();

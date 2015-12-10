@@ -145,12 +145,12 @@ impl<T> DefinesNonPrefixCharacters for T where T : DefaultCharacterDefinitions {
 }
 
 
-/// Default settings for all tokenizers, and trainers.
-pub struct Default;
+/// Standard settings for all tokenizers, and trainers.
+pub struct Standard;
 
-impl DefaultCharacterDefinitions for Default { }
+impl DefaultCharacterDefinitions for Standard { }
 
-impl TrainerParameters for Default {
+impl TrainerParameters for Standard {
   #[inline(always)] fn abbrev_lower_bound() -> f64 { 0.3 }
   #[inline(always)] fn abbrev_upper_bound() -> f64 { 5f64 }
   #[inline(always)] fn ignore_abbrev_penalty() -> bool { false }

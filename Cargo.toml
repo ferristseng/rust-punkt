@@ -17,3 +17,6 @@ phf = "0.7"
 phf_macros = "0.7"
 rustc-serialize = "0.3"
 rust-freqdist = "0.1"
+
+[dev-dependencies]
+walkdir = "0.1"

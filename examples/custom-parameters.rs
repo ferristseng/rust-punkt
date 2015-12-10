@@ -18,13 +18,13 @@ struct MyParams;
 
 impl DefinesSentenceEndings for MyParams { 
   #[inline(always)] fn sentence_endings() -> &'static Set<char> { 
-    Default::sentence_endings()
+    Standard::sentence_endings()
   }
 }
 
 impl DefinesInternalPunctuation for MyParams {
   #[inline(always)] fn internal_punctuation() -> &'static Set<char> {
-    Default::sentence_endings()
+    Standard::sentence_endings()
   }
 }
 
@@ -36,13 +36,13 @@ impl DefinesNonWordCharacters for MyParams {
 
 impl DefinesPunctuation for MyParams {
   #[inline(always)] fn punctuation() -> &'static Set<char> {
-    Default::punctuation()
+    Standard::punctuation()
   }
 }
 
 impl DefinesNonPrefixCharacters for MyParams {
   #[inline(always)] fn nonprefix_chars() -> &'static Set<char> {
-    Default::nonprefix_chars()
+    Standard::nonprefix_chars()
   }
 }
 

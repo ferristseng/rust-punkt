@@ -1,7 +1,7 @@
 extern crate punkt;
 
 use punkt::{SentenceTokenizer, Trainer, TrainingData};
-use punkt::params::{Default};
+use punkt::params::{Standard};
 
 
 fn main() {
@@ -15,12 +15,12 @@ fn main() {
   // the input document.
   println!("\n-- Trained only using document --");
   for d in docs.iter() {
-    let trainer: Trainer<Default> = Trainer::new();
+    let trainer: Trainer<Standard> = Trainer::new();
     let mut data = TrainingData::new();
 
     trainer.train(d, &mut data);
 
-    for s in SentenceTokenizer::<Default>::new(d, &data) {
+    for s in SentenceTokenizer::<Standard>::new(d, &data) {
       println!("{:?}", s);
     }
   }
@@ -30,20 +30,20 @@ fn main() {
 
   println!("\n-- Using pretrained data --");
   for d in docs.iter() {
-    for s in SentenceTokenizer::<Default>::new(d, &english) {
+    for s in SentenceTokenizer::<Standard>::new(d, &english) {
       println!("{:?}", s);
     }
   }
 
   // You can incrementally build up training data too.
-  let trainer: Trainer<Default> = Trainer::new();
+  let trainer: Trainer<Standard> = Trainer::new();
   let mut data = TrainingData::new();
 
   println!("\n-- Trained incrementally --");
   for d in docs.iter() {
     trainer.train(d, &mut data);
 
-    for s in SentenceTokenizer::<Default>::new(d, &data) {
+    for s in SentenceTokenizer::<Standard>::new(d, &data) {
       println!("{:?}", s);
     }
   }
