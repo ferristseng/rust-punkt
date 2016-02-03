@@ -144,3 +144,18 @@ long    - 1.3414202709775418 s   = 1.34142 x 10^9 ns ~ 10.3283365927x improvemen
 medium  - 0.007250561956316233 s = 7.25056 x 10^6 ns ~ 8.03950245027x improvement
 short   - 0.005532620595768094 s = 5.53262 x 10^6 ns ~ 7.870283759x   improvement
 ```
+
+## License
+
+Licensed under either of
+
+ * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+ * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any
+additional terms or conditions.
