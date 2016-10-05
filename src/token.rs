@@ -40,7 +40,7 @@ impl Token {
   pub fn new(slice: &str, is_el: bool, is_pg: bool, is_nl: bool) -> Token {
     debug_assert!(slice.len() > 0);
 
-    let first = slice.char_at(0);
+    let first = slice.chars().nth(0).unwrap();
     let mut has_punct = false;
 
     // Add a period to any tokens without a period. This is an optimization

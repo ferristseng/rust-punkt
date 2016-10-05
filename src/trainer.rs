@@ -14,7 +14,6 @@ use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
 use std::collections::{HashSet, HashMap};
 
-use num::Float;
 use freqdist::FrequencyDistribution;
 use rustc_serialize::json::Json;
 
@@ -436,7 +435,7 @@ fn is_rare_abbrev_type<P>(data: &TrainingData,
     // Already an abbreviation...
     if data.contains_abbrev(tok0.typ()) || count >= P::abbrev_upper_bound() {
       false
-    } else if P::is_internal_punctuation(&tok1.typ().char_at(0)) {
+    } else if P::is_internal_punctuation(&tok1.typ().chars().next().unwrap()) {
       true
     } else if tok1.is_lowercase() {
       let ctxt = data.get_orthographic_context(tok1.typ_without_break_or_period());

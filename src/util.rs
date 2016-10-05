@@ -21,7 +21,7 @@ pub fn annotate_first_pass<P: DefinesSentenceEndings>(tok: &mut Token, data: &Tr
                            .map(|s| data.contains_abbrev(s))
                            .unwrap_or(false);
 
-  if tok.tok().len() == 1 && P::is_sentence_ending(&tok.tok().char_at(0)) {
+  if tok.tok().len() == 1 && P::is_sentence_ending(&tok.tok().chars().nth(0).unwrap()) {
     tok.set_is_sentence_break(true);
   } else if tok.has_final_period() && !tok.is_ellipsis() {
     if is_split_abbrev || data.contains_abbrev(tok.tok_without_period()) {

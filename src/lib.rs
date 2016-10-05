@@ -133,7 +133,7 @@
 //! }
 //! ```
 
-#![feature(plugin, str_char)]
+#![feature(plugin)]
 #![cfg_attr(test, feature(test))]
 #![plugin(phf_macros)]
 #![warn(missing_docs)]

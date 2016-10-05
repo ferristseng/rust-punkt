@@ -45,7 +45,8 @@ impl<'a, P> PeriodContextTokenizer<'a, P> where P: DefinesNonWordCharacters + De
     let mut pos = self.pos;
 
     while pos < self.doc.len() {
-      let cur = self.doc.char_at(pos);
+      let mut iter = self.doc[pos..].chars();
+      let cur = iter.nth(0).unwrap();
 
       match cur {
         // A whitespace is reached before a sentence ending character
@@ -55,7 +56,7 @@ impl<'a, P> PeriodContextTokenizer<'a, P> where P: DefinesNonWordCharacters + De
         // of a new token (if there is a space after it, or if the next
         // character is puntuation).
         c if P::is_sentence_ending(&c) => {
-          let nxt = self.doc.char_at(pos + cur.len_utf8());
+          let nxt = iter.next().unwrap();
 
           if nxt.is_whitespace() || P::is_nonword_char(&nxt) {
             break;
@@ -86,7 +87,7 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
     let mut state: u8 = 0;
 
     while self.pos < self.doc.len() {
-      let cur = self.doc.char_at(self.pos);
+      let cur = self.doc[self.pos..].chars().next().unwrap();
 
       macro_rules! return_token(
         () => (
@@ -240,7 +241,7 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
     );
 
     while self.pos < self.doc.len() {
-      let cur = self.doc.char_at(self.pos);
+      let cur = self.doc[self.pos..].chars().next().unwrap();
 
       // Periods or dashes are the start of multi-chars. A multi-char
       // is defined as an ellipsis or hyphen (multiple-dashes). If there
@@ -496,7 +497,7 @@ fn orthographic_heuristic<P>(tok: &Token, data: &TrainingData) -> Option<bool>
 {
   use prelude::{ORT_LC, MID_UC, ORT_UC, BEG_LC};
 
-  if P::is_punctuation(&tok.tok().char_at(0)) {
+  if P::is_punctuation(&tok.tok().chars().nth(0).unwrap()) {
     Some(false)
   } else {
     let ctxt = data.get_orthographic_context(tok.typ_without_break_or_period());
