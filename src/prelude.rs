@@ -8,10 +8,8 @@
 
 use phf;
 
-
 /// Type for character sets.
 pub type Set<T> = phf::Set<T>;
-
 
 /// Defines a set of punctuation that can end a sentence.
 pub trait DefinesSentenceEndings {
@@ -24,7 +22,6 @@ pub trait DefinesSentenceEndings {
     Self::sentence_endings().contains(c)
   }
 }
-
 
 /// Defines a set of punctuation that can occur within a word.
 pub trait DefinesInternalPunctuation {
@@ -39,7 +36,6 @@ pub trait DefinesInternalPunctuation {
   }
 }
 
-
 /// Defines a set of characters that can not occur inside of a word.
 pub trait DefinesNonWordCharacters {
   /// The set of characters that can not occur inside of a word.
@@ -51,7 +47,6 @@ pub trait DefinesNonWordCharacters {
     Self::nonword_chars().contains(c)
   }
 }
-
 
 /// Defines punctuation that can occur within a sentence.
 pub trait DefinesPunctuation {
@@ -65,7 +60,6 @@ pub trait DefinesPunctuation {
   }
 }
 
-
 /// Defines a set of a characters that can not start a word.
 pub trait DefinesNonPrefixCharacters {
   /// The set of characters that can not start a word.
@@ -78,9 +72,8 @@ pub trait DefinesNonPrefixCharacters {
   }
 }
 
-
 /// Configurable parameters for a trainer.
-pub trait TrainerParameters : DefinesSentenceEndings + DefinesInternalPunctuation {
+pub trait TrainerParameters: DefinesSentenceEndings + DefinesInternalPunctuation {
   /// Lower bound score for a token to be considered an abbreviation.
   fn abbrev_lower_bound() -> f64;
 
@@ -109,23 +102,25 @@ pub trait TrainerParameters : DefinesSentenceEndings + DefinesInternalPunctuatio
   fn collocation_frequency_lower_bound() -> f64;
 }
 
-
 static INTERNAL_PUNCT: Set<char> = phf_set![',', ':', ';', '\u{2014}'];
 static SENTENCE_ENDINGS: Set<char> = phf_set!['.', '?', '!'];
 static PUNCTUATION: Set<char> = phf_set![';', ':', ',', '.', '!', '?'];
-static NONWORD_CHARS: Set<char> = phf_set!['?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'',
-                                           '(', '{', '['];
-static NONPREFIX_CHARS: Set<char> = phf_set!['(', '"', '`', '{', '[', ':', ';', '&', '#', '*',
-                                             '@', ')', '}', ']', '-', ','];
-
+static NONWORD_CHARS: Set<char> = phf_set![
+  '?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'', '(', '{', '['
+];
+static NONPREFIX_CHARS: Set<char> = phf_set![
+  '(', '"', '`', '{', '[', ':', ';', '&', '#', '*', '@', ')', '}', ']', '-', ','
+];
 
 /// Mixin that will give the default implementations for
 /// `DefinesSentenceEndings`, `DefinesInternalPunctuation`,
 /// `DefinesNonWordCharacter`, `DefinesEndingPunctuation`,
 /// and `DefinesNonPrefixCharacters`.
-pub trait DefaultCharacterDefinitions { }
+pub trait DefaultCharacterDefinitions {}
 
-impl<T> DefinesSentenceEndings for T where T: DefaultCharacterDefinitions
+impl<T> DefinesSentenceEndings for T
+where
+  T: DefaultCharacterDefinitions,
 {
   #[inline(always)]
   fn sentence_endings() -> &'static Set<char> {
@@ -133,7 +128,9 @@ impl<T> DefinesSentenceEndings for T where T: DefaultCharacterDefinitions
   }
 }
 
-impl<T> DefinesInternalPunctuation for T where T: DefaultCharacterDefinitions
+impl<T> DefinesInternalPunctuation for T
+where
+  T: DefaultCharacterDefinitions,
 {
   #[inline(always)]
   fn internal_punctuation() -> &'static Set<char> {
@@ -141,7 +138,9 @@ impl<T> DefinesInternalPunctuation for T where T: DefaultCharacterDefinitions
   }
 }
 
-impl<T> DefinesNonWordCharacters for T where T: DefaultCharacterDefinitions
+impl<T> DefinesNonWordCharacters for T
+where
+  T: DefaultCharacterDefinitions,
 {
   #[inline(always)]
   fn nonword_chars() -> &'static Set<char> {
@@ -149,7 +148,9 @@ impl<T> DefinesNonWordCharacters for T where T: DefaultCharacterDefinitions
   }
 }
 
-impl<T> DefinesPunctuation for T where T: DefaultCharacterDefinitions
+impl<T> DefinesPunctuation for T
+where
+  T: DefaultCharacterDefinitions,
 {
   #[inline(always)]
   fn punctuation() -> &'static Set<char> {
@@ -157,14 +158,15 @@ impl<T> DefinesPunctuation for T where T: DefaultCharacterDefinitions
   }
 }
 
-impl<T> DefinesNonPrefixCharacters for T where T: DefaultCharacterDefinitions
+impl<T> DefinesNonPrefixCharacters for T
+where
+  T: DefaultCharacterDefinitions,
 {
   #[inline(always)]
   fn nonprefix_chars() -> &'static Set<char> {
     &NONPREFIX_CHARS
   }
 }
-
 
 /// Standard settings for all tokenizers, and trainers.
 pub struct Standard;
@@ -206,9 +208,7 @@ impl TrainerParameters for Standard {
   }
 }
 
-
 pub type OrthographicContext = u8;
-
 
 #[derive(PartialEq, Eq)]
 pub enum OrthographyPosition {
@@ -227,7 +227,6 @@ impl OrthographyPosition {
   }
 }
 
-
 pub const BEG_UC: OrthographicContext = 0b00000010;
 pub const MID_UC: OrthographicContext = 0b00000100;
 pub const UNK_UC: OrthographicContext = 0b00001000;
@@ -236,7 +235,6 @@ pub const MID_LC: OrthographicContext = 0b00100000;
 pub const UNK_LC: OrthographicContext = 0b01000000;
 pub const ORT_UC: OrthographicContext = BEG_UC | MID_UC | UNK_UC;
 pub const ORT_LC: OrthographicContext = BEG_LC | MID_LC | UNK_LC;
-
 
 /// Map relating a combination of LetterCase and OrthographyPosition
 /// to an OrthographicConstant describing orthographic attributes about the
@@ -250,7 +248,6 @@ pub static ORTHO_MAP: phf::Map<u8, OrthographicContext> = phf_map! {
   b'!' => MID_LC, // 33
   b'a' => UNK_LC  // 97
 };
-
 
 pub enum LetterCase {
   Upper,

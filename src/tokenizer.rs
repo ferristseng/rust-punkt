@@ -10,9 +10,8 @@ use std::marker::PhantomData;
 
 use token::Token;
 use trainer::TrainingData;
-use prelude::{DefinesSentenceEndings, DefinesNonWordCharacters, DefinesNonPrefixCharacters,
-              DefinesPunctuation};
-
+use prelude::{DefinesNonPrefixCharacters, DefinesNonWordCharacters, DefinesPunctuation,
+              DefinesSentenceEndings};
 
 const STATE_SENT_END: u8 = 0b00000001; // Hit a sentence end state.
 const STATE_TOKN_BEG: u8 = 0b00000010; // Token began state.
@@ -20,14 +19,15 @@ const STATE_CAPT_TOK: u8 = 0b00000100; // Start capturing token state.
 const STATE_UPDT_STT: u8 = 0b10000000; // Update the start token flag.
 const STATE_UPDT_RET: u8 = 0b01000000; // Update the position at end flag.
 
-
 struct PeriodContextTokenizer<'a, P> {
   doc: &'a str,
   pos: usize,
   params: PhantomData<P>,
 }
 
-impl<'a, P> PeriodContextTokenizer<'a, P> where P: DefinesNonWordCharacters + DefinesSentenceEndings
+impl<'a, P> PeriodContextTokenizer<'a, P>
+where
+  P: DefinesNonWordCharacters + DefinesSentenceEndings,
 {
   #[inline(always)]
   pub fn new(doc: &'a str) -> PeriodContextTokenizer<'a, P> {
@@ -75,7 +75,8 @@ impl<'a, P> PeriodContextTokenizer<'a, P> where P: DefinesNonWordCharacters + De
 }
 
 impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
-  where P: DefinesNonWordCharacters + DefinesSentenceEndings
+where
+  P: DefinesNonWordCharacters + DefinesSentenceEndings,
 {
   // (Entire slice of section, beginning of next break (if there is one),
   // start of whitespace before next token, end of entire slice,
@@ -164,8 +165,9 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
         }
         // Capturing the whitespace before a token, and a non-whitespace
         // is encountered. Start capturing that token.
-        c if state & STATE_SENT_END != 0 && state & STATE_TOKN_BEG != 0 &&
-             state & STATE_CAPT_TOK == 0 => {
+        c if state & STATE_SENT_END != 0 && state & STATE_TOKN_BEG != 0
+          && state & STATE_CAPT_TOK == 0 =>
+        {
           if !c.is_whitespace() {
             nstart = self.pos;
             state |= STATE_CAPT_TOK;
@@ -184,12 +186,10 @@ impl<'a, P> Iterator for PeriodContextTokenizer<'a, P>
   }
 }
 
-
 const NEWLINE_START: u8 = 0b00000001;
 const PARAGPH_START: u8 = 0b00000010;
 const CAPTURE_START: u8 = 0b00000100;
 const CAPTURE_COMMA: u8 = 0b00001000;
-
 
 pub struct WordTokenizer<'a, P> {
   pos: usize,
@@ -197,7 +197,9 @@ pub struct WordTokenizer<'a, P> {
   params: PhantomData<P>,
 }
 
-impl<'a, P> WordTokenizer<'a, P> where P: DefinesNonPrefixCharacters + DefinesNonWordCharacters
+impl<'a, P> WordTokenizer<'a, P>
+where
+  P: DefinesNonPrefixCharacters + DefinesNonWordCharacters,
 {
   #[inline(always)]
   pub fn new(doc: &'a str) -> WordTokenizer<'a, P> {
@@ -210,16 +212,13 @@ impl<'a, P> WordTokenizer<'a, P> where P: DefinesNonPrefixCharacters + DefinesNo
 }
 
 impl<'a, P> Iterator for WordTokenizer<'a, P>
-  where P: DefinesNonPrefixCharacters + DefinesNonWordCharacters
+where
+  P: DefinesNonPrefixCharacters + DefinesNonWordCharacters,
 {
   type Item = Token;
 
   fn next(&mut self) -> Option<Token> {
-    let mut state = if self.pos == 0 {
-      NEWLINE_START
-    } else {
-      0u8
-    };
+    let mut state = if self.pos == 0 { NEWLINE_START } else { 0u8 };
     let mut start = self.pos;
     let mut is_ellipsis = false;
 
@@ -254,23 +253,21 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
         // one exists return it, and modify `self.pos`. Otherwise, continue.
         // If a capture has begin, or a comma was encountered, return the token
         // before this multi-char.
-        '.' | '-' => {
-          match is_multi_char(self.doc, self.pos) {
-            Some(s) => {
-              if state & CAPTURE_START != 0 || state & CAPTURE_COMMA != 0 {
-                return_token!()
-              }
-
-              start = self.pos;
-              is_ellipsis = s.ends_with(".");
-
-              self.pos += s.len();
-
+        '.' | '-' => match is_multi_char(self.doc, self.pos) {
+          Some(s) => {
+            if state & CAPTURE_START != 0 || state & CAPTURE_COMMA != 0 {
               return_token!()
             }
-            None => (),
+
+            start = self.pos;
+            is_ellipsis = s.ends_with(".");
+
+            self.pos += s.len();
+
+            return_token!()
           }
-        }
+          None => (),
+        },
         // Not a potential multi-char start, continue...
         _ => (),
       }
@@ -335,7 +332,6 @@ impl<'a, P> Iterator for WordTokenizer<'a, P>
   }
 }
 
-
 /// Iterator over the byte offsets of a document.
 ///
 /// # Examples
@@ -360,27 +356,31 @@ pub struct SentenceByteOffsetTokenizer<'a, P> {
 }
 
 impl<'a, P> SentenceByteOffsetTokenizer<'a, P>
-  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters +
-            DefinesPunctuation + DefinesSentenceEndings
+where
+  P: DefinesNonPrefixCharacters
+    + DefinesNonWordCharacters
+    + DefinesPunctuation
+    + DefinesSentenceEndings,
 {
-/// Creates a new `SentenceByteOffsetTokenizer`.
-  #[inline(always)] pub fn new(
-    doc: &'a str,
-    data: &'a TrainingData
-  ) -> SentenceByteOffsetTokenizer<'a, P> {
+  /// Creates a new `SentenceByteOffsetTokenizer`.
+  #[inline(always)]
+  pub fn new(doc: &'a str, data: &'a TrainingData) -> SentenceByteOffsetTokenizer<'a, P> {
     SentenceByteOffsetTokenizer {
       doc: doc,
       iter: PeriodContextTokenizer::new(doc),
       data: data,
       last: 0,
-      params: PhantomData
+      params: PhantomData,
     }
   }
 }
 
 impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
-  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters +
-            DefinesPunctuation + DefinesSentenceEndings
+where
+  P: DefinesNonPrefixCharacters
+    + DefinesNonWordCharacters
+    + DefinesPunctuation
+    + DefinesSentenceEndings,
 {
   type Item = (usize, usize);
 
@@ -389,14 +389,14 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
       let mut prv = None;
       let mut has_sentence_break = false;
 
-// Get word tokens in the slice. If any of them has a sentence break,
-// then set the flag `has_sentence_break`.
+      // Get word tokens in the slice. If any of them has a sentence break,
+      // then set the flag `has_sentence_break`.
       for mut t in WordTokenizer::<P>::new(slice) {
-// First pass annotation can occur for each token...
+        // First pass annotation can occur for each token...
         ::util::annotate_first_pass::<P>(&mut t, self.data);
 
-// Second pass annotation is a bit more finicky...It depends on the
-// previous token that was found.
+        // Second pass annotation is a bit more finicky...It depends on the
+        // previous token that was found.
         match prv {
           Some(mut p) => {
             annotate_second_pass::<P>(&mut t, &mut p, self.data);
@@ -406,17 +406,17 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
               break;
             }
           }
-          None => ()
+          None => (),
         }
 
         prv = Some(t);
       }
 
-// If there is a token with a sentence break, it is the end of
-// a sentence. Set the beginning of the next sentence to the start
-// of the start of the token, or the end of the slice if the token is
-// punctuation. Then return the sentence.
-      if has_sentence_break  {
+      // If there is a token with a sentence break, it is the end of
+      // a sentence. Set the beginning of the next sentence to the start
+      // of the start of the token, or the end of the slice if the token is
+      // punctuation. Then return the sentence.
+      if has_sentence_break {
         let start = self.last;
 
         return if tok_start == slice_end {
@@ -425,12 +425,12 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
         } else {
           self.last = tok_start;
           Some((start, ws_start))
-        }
+        };
       }
     }
 
-// TODO: NLTK gives you back the remaining text as a sentence, including
-// trailing whitespace. Ideally, this wouldn't return trailing whitespace.
+    // TODO: NLTK gives you back the remaining text as a sentence, including
+    // trailing whitespace. Ideally, this wouldn't return trailing whitespace.
     if self.iter.pos == self.doc.len() {
       self.iter.pos += 1;
       Some((self.last, self.doc.len()))
@@ -439,7 +439,6 @@ impl<'a, P> Iterator for SentenceByteOffsetTokenizer<'a, P>
     }
   }
 }
-
 
 /// Iterator over the sentence slices of a document.
 ///
@@ -463,41 +462,46 @@ pub struct SentenceTokenizer<'a, P> {
 }
 
 impl<'a, P> SentenceTokenizer<'a, P>
-  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters +
-            DefinesPunctuation + DefinesSentenceEndings
+where
+  P: DefinesNonPrefixCharacters
+    + DefinesNonWordCharacters
+    + DefinesPunctuation
+    + DefinesSentenceEndings,
 {
-/// Creates a new `SentenceTokenizer`.
-  #[inline(always)] pub fn new(
-    doc: &'a str,
-    data: &'a TrainingData
-  ) -> SentenceTokenizer<'a, P> {
+  /// Creates a new `SentenceTokenizer`.
+  #[inline(always)]
+  pub fn new(doc: &'a str, data: &'a TrainingData) -> SentenceTokenizer<'a, P> {
     SentenceTokenizer {
       doc: doc,
       iter: SentenceByteOffsetTokenizer::new(doc, data),
-      params: PhantomData
+      params: PhantomData,
     }
   }
 }
 
 impl<'a, P> Iterator for SentenceTokenizer<'a, P>
-  where P : DefinesNonPrefixCharacters + DefinesNonWordCharacters +
-            DefinesPunctuation + DefinesSentenceEndings
+where
+  P: DefinesNonPrefixCharacters
+    + DefinesNonWordCharacters
+    + DefinesPunctuation
+    + DefinesSentenceEndings,
 {
   type Item = &'a str;
 
-  #[inline] fn next(&mut self) -> Option<&'a str> {
+  #[inline]
+  fn next(&mut self) -> Option<&'a str> {
     self.iter.next().map(|(start, end)| &self.doc[start..end])
   }
 }
-
 
 /// Orthographic heuristic uses structural properties of the token to
 /// decide whether a token is the first in a sentence or not. If no
 /// decision can be made, None is returned.
 fn orthographic_heuristic<P>(tok: &Token, data: &TrainingData) -> Option<bool>
-  where P: DefinesPunctuation
+where
+  P: DefinesPunctuation,
 {
-  use prelude::{ORT_LC, MID_UC, ORT_UC, BEG_LC};
+  use prelude::{BEG_LC, MID_UC, ORT_LC, ORT_UC};
 
   if P::is_punctuation(&tok.tok().chars().nth(0).unwrap()) {
     Some(false)
@@ -514,11 +518,11 @@ fn orthographic_heuristic<P>(tok: &Token, data: &TrainingData) -> Option<bool>
   }
 }
 
-
 /// Performs a second pass annotation on the tokens revising any previously
 /// made decisions if new, relevant data is known.
 fn annotate_second_pass<P>(cur: &mut Token, prv: &mut Token, data: &TrainingData)
-  where P: DefinesPunctuation
+where
+  P: DefinesPunctuation,
 {
   use prelude::ORT_LC;
 
@@ -561,7 +565,6 @@ fn annotate_second_pass<P>(cur: &mut Token, prv: &mut Token, data: &TrainingData
     }
   }
 }
-
 
 /// Checks if the a slice of the document starting at pos
 /// is a multi char (ex. "...", ". . .", "--").
@@ -608,7 +611,6 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
   }
 }
 
-
 #[test]
 fn periodctxt_tokenizer_compare_nltk() {
   use std::iter::Iterator;
@@ -628,7 +630,6 @@ fn periodctxt_tokenizer_compare_nltk() {
   }
 }
 
-
 #[test]
 fn smoke_test_is_multi_char_pass() {
   let docs = vec![". . .", "..", "--", "---", ". . . . .", ".. .."];
@@ -637,7 +638,6 @@ fn smoke_test_is_multi_char_pass() {
     assert!(is_multi_char(*d, 0).is_some(), "failed {}", *d);
   }
 }
-
 
 #[test]
 fn word_tokenizer_compare_nltk() {
@@ -649,15 +649,16 @@ fn word_tokenizer_compare_nltk() {
     println!("  running wordtok tests for {:?}", file);
 
     for (t, e) in iter.zip(expected) {
-      assert!(t.typ().to_lowercase() == e.trim(),
-              "{} - you: [{}] != exp: [{}]",
-              file,
-              t.typ().to_lowercase(),
-              e.trim());
+      assert!(
+        t.typ().to_lowercase() == e.trim(),
+        "{} - you: [{}] != exp: [{}]",
+        file,
+        t.typ().to_lowercase(),
+        e.trim()
+      );
     }
   }
 }
-
 
 #[cfg(test)]
 fn train_on_document(data: &mut TrainingData, doc: &str) {
@@ -666,7 +667,6 @@ fn train_on_document(data: &mut TrainingData, doc: &str) {
   let trainer: Trainer<::prelude::Standard> = Trainer::new();
   trainer.train(&doc, data);
 }
-
 
 #[test]
 fn sentence_tokenizer_compare_nltk_train_on_document() {
@@ -683,19 +683,20 @@ fn sentence_tokenizer_compare_nltk_train_on_document() {
 
     for (t, e) in iter.zip(expected.iter()) {
       let s = format!("[{}]", t)
-                .replace("\"", "\\\"")
-                .replace("\n", "\\n")
-                .replace("\r", "");
+        .replace("\"", "\\\"")
+        .replace("\n", "\\n")
+        .replace("\r", "");
 
-      assert!(s == e.trim(),
-              "{} - you: [{}] != exp: [{}]",
-              file,
-              s,
-              e.trim());
+      assert!(
+        s == e.trim(),
+        "{} - you: [{}] != exp: [{}]",
+        file,
+        s,
+        e.trim()
+      );
     }
   }
 }
-
 
 // https://github.com/ferristseng/rust-punkt/issues/5
 #[test]
@@ -716,7 +717,6 @@ fn sentence_tokenizer_issue_8_test() {
   let _: Vec<_> = SentenceTokenizer::<::params::Standard>::new(doc, &data).collect();
 }
 
-
 macro_rules! bench_word_tokenizer(
   ($name:ident, $doc:expr) => (
     #[bench] fn $name(b: &mut ::test::Bencher) {
@@ -730,20 +730,23 @@ macro_rules! bench_word_tokenizer(
 
 bench_word_tokenizer!(
   word_tokenizer_bench_short,
-  include_str!("../test/raw/sigma-wiki.txt"));
+  include_str!("../test/raw/sigma-wiki.txt")
+);
 
 bench_word_tokenizer!(
   word_tokenizer_bench_medium,
-  include_str!("../test/raw/npr-article-01.txt"));
+  include_str!("../test/raw/npr-article-01.txt")
+);
 
 bench_word_tokenizer!(
   word_tokenizer_bench_long,
-  include_str!("../test/raw/the-sayings-of-confucius.txt"));
+  include_str!("../test/raw/the-sayings-of-confucius.txt")
+);
 
 bench_word_tokenizer!(
   word_tokenizer_bench_very_long,
-  include_str!("../test/raw/pride-and-prejudice.txt"));
-
+  include_str!("../test/raw/pride-and-prejudice.txt")
+);
 
 macro_rules! bench_sentence_tokenizer(
   ($name:ident, $doc:expr) => (
@@ -765,12 +768,15 @@ macro_rules! bench_sentence_tokenizer(
 
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_short,
-  include_str!("../test/raw/sigma-wiki.txt"));
+  include_str!("../test/raw/sigma-wiki.txt")
+);
 
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_medium,
-  include_str!("../test/raw/npr-article-01.txt"));
+  include_str!("../test/raw/npr-article-01.txt")
+);
 
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_long,
-  include_str!("../test/raw/pride-and-prejudice.txt"));
+  include_str!("../test/raw/pride-and-prejudice.txt")
+);

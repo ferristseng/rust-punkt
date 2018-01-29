@@ -11,7 +11,6 @@ use std::hash::{Hash, Hasher};
 
 use prelude::LetterCase;
 
-
 // These 6 flags only use the lower 8 bits.
 const HAS_FINAL_PERIOD: u16 = 0b0000000000000001;
 const IS_ELLIPSIS: u16 = 0b0000000000000010;
@@ -22,13 +21,11 @@ const IS_NEWLINE_START: u16 = 0b0000000000100000;
 const IS_UPPERCASE: u16 = 0b0000000001000000;
 const IS_LOWERCASE: u16 = 0b0000000010000000;
 
-
 // These flags only use the upper 8 bits.
 const IS_INITIAL: u16 = 0b1000000000000000;
 const IS_NUMERIC: u16 = 0b0100000000000000;
 const IS_NON_PUNCT: u16 = 0b0010000000000000;
 const IS_ALPHABETIC: u16 = 0b0000010000000000;
-
 
 #[derive(Eq)]
 pub struct Token {
@@ -365,12 +362,12 @@ impl PartialEq for Token {
 impl Hash for Token {
   #[inline(always)]
   fn hash<H>(&self, state: &mut H)
-    where H: Hasher
+  where
+    H: Hasher,
   {
     self.typ().hash(state)
   }
 }
-
 
 /// A number can start with a negative sign ('-'), and be followed by digits
 /// or isolated periods, commas, or dashes.
@@ -407,7 +404,6 @@ fn is_str_numeric(tok: &str) -> bool {
   digit_found
 }
 
-
 /// Tests if the token is an initial. An initial is a 2 character grouping
 /// where the first character is a letter (non-digit, non-symbol), and the
 /// next is a period.
@@ -420,7 +416,6 @@ fn is_str_initial(tok: &str) -> bool {
     _ => false,
   }
 }
-
 
 #[test]
 fn test_token_flags() {

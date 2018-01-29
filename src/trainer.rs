@@ -12,7 +12,7 @@ use std::str::FromStr;
 use std::default::Default;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 use freqdist::FrequencyDistribution;
 use rustc_serialize::json::Json;
@@ -20,21 +20,23 @@ use rustc_serialize::json::Json;
 use util;
 use token::Token;
 use tokenizer::WordTokenizer;
-use prelude::{TrainerParameters, DefinesNonPrefixCharacters, DefinesNonWordCharacters,
-              OrthographicContext, OrthographyPosition};
-
+use prelude::{DefinesNonPrefixCharacters, DefinesNonWordCharacters, OrthographicContext,
+              OrthographyPosition, TrainerParameters};
 
 /// A collocation is any pair of words that has a high likelihood of appearing
 /// together.
 #[derive(Debug, Eq)]
 pub struct Collocation<T>
-  where T: Deref<Target = Token>
+where
+  T: Deref<Target = Token>,
 {
   l: T,
   r: T,
 }
 
-impl<T> Collocation<T> where T: Deref<Target = Token>
+impl<T> Collocation<T>
+where
+  T: Deref<Target = Token>,
 {
   #[inline(always)]
   pub fn new(l: T, r: T) -> Collocation<T> {
@@ -52,26 +54,30 @@ impl<T> Collocation<T> where T: Deref<Target = Token>
   }
 }
 
-impl<T> Hash for Collocation<T> where T: Deref<Target = Token>
+impl<T> Hash for Collocation<T>
+where
+  T: Deref<Target = Token>,
 {
   #[inline(always)]
   fn hash<H>(&self, state: &mut H)
-    where H: Hasher
+  where
+    H: Hasher,
   {
     (*self.l).typ_without_period().hash(state);
     (*self.r).typ_without_break_or_period().hash(state);
   }
 }
 
-impl<T> PartialEq for Collocation<T> where T: Deref<Target = Token>
+impl<T> PartialEq for Collocation<T>
+where
+  T: Deref<Target = Token>,
 {
   #[inline(always)]
   fn eq(&self, x: &Collocation<T>) -> bool {
-    (*self.l).typ_without_period() == (*x.l).typ_without_period() &&
-    (*self.r).typ_without_break_or_period() == (*x.r).typ_without_break_or_period()
+    (*self.l).typ_without_period() == (*x.l).typ_without_period()
+      && (*self.r).typ_without_break_or_period() == (*x.r).typ_without_break_or_period()
   }
 }
-
 
 /// Stores data that was obtained during training.
 ///
@@ -100,7 +106,9 @@ impl TrainingData {
   /// Creates a new, empty data object.
   #[inline(always)]
   pub fn new() -> TrainingData {
-    TrainingData { ..Default::default() }
+    TrainingData {
+      ..Default::default()
+    }
   }
 
   /// Check if a token is considered to be an abbreviation.
@@ -145,10 +153,11 @@ impl TrainingData {
   /// Checks if a pair of words are commonly known to appear together.
   #[inline]
   pub fn contains_collocation(&self, left: &str, right: &str) -> bool {
-    self.collocations
-        .get(left)
-        .map(|s| s.contains(right))
-        .unwrap_or(false)
+    self
+      .collocations
+      .get(left)
+      .map(|s| s.contains(right))
+      .unwrap_or(false)
   }
 
   /// Insert a newly learned pair of words that frequently appear together.
@@ -158,10 +167,11 @@ impl TrainingData {
     }
 
     if !self.collocations.get(left).unwrap().contains(right) {
-      self.collocations
-          .get_mut(left)
-          .unwrap()
-          .insert(right.to_string());
+      self
+        .collocations
+        .get_mut(left)
+        .unwrap()
+        .insert(right.to_string());
       true
     } else {
       false
@@ -221,35 +231,37 @@ impl FromStr for TrainingData {
           );
         );
 
-        read_json_array_data!("abbrev_types",
-                              Json::String(st),
-                              data.insert_abbrev(&st[..]));
+        read_json_array_data!(
+          "abbrev_types",
+          Json::String(st),
+          data.insert_abbrev(&st[..])
+        );
 
-        read_json_array_data!("sentence_starters",
-                              Json::String(st),
-                              data.insert_sentence_starter(&st[..]));
+        read_json_array_data!(
+          "sentence_starters",
+          Json::String(st),
+          data.insert_sentence_starter(&st[..])
+        );
 
         // Load collocations, these come as an array with 2 members in them (or they should).
         // Pop them in reverse order, then insert into the proper bucket.
         read_json_array_data!("collocations", Json::Array(mut ar), {
           match (ar.pop(), ar.pop()) {
-            (Some(Json::String(r)), Some(Json::String(l))) =>
-              data
-                .collocations
-                .entry(l)
-                .or_insert(HashSet::new())
-                .insert(r),
-            _ => return Err("failed to parse collocations section")
+            (Some(Json::String(r)), Some(Json::String(l))) => data
+              .collocations
+              .entry(l)
+              .or_insert(HashSet::new())
+              .insert(r),
+            _ => return Err("failed to parse collocations section"),
           };
         });
 
         match obj.remove("ortho_context") {
-          Some(Json::Object(obj)) => {
-            for (k, ctxt) in obj.into_iter() {
-              ctxt.as_u64()
-                  .map(|c| data.orthographic_context.insert(k, c as u8));
-            }
-          }
+          Some(Json::Object(obj)) => for (k, ctxt) in obj.into_iter() {
+            ctxt
+              .as_u64()
+              .map(|c| data.orthographic_context.insert(k, c as u8));
+          },
           _ => return Err("failed to parse orthographic context section"),
         }
 
@@ -260,7 +272,6 @@ impl FromStr for TrainingData {
   }
 }
 
-
 /// A trainer will build data about abbreviations, sentence starters,
 /// collocations, and context that tokens appear in. The data is
 /// used by the sentence tokenizer to determine if a period is likely
@@ -270,12 +281,15 @@ pub struct Trainer<P> {
 }
 
 impl<P> Trainer<P>
-  where P: TrainerParameters + DefinesNonPrefixCharacters + DefinesNonWordCharacters
+where
+  P: TrainerParameters + DefinesNonPrefixCharacters + DefinesNonWordCharacters,
 {
   /// Creates a new Trainer.
   #[inline(always)]
   pub fn new() -> Trainer<P> {
-    Trainer { params: PhantomData }
+    Trainer {
+      params: PhantomData,
+    }
   }
 
   /// Train on a document. Does tokenization using a WordTokenizer.
@@ -407,22 +421,24 @@ impl<P> Trainer<P>
 
       for (col, _) in clc_iter {
         unsafe {
-          (&mut *(data as *const TrainingData as *mut TrainingData))
-            .insert_collocation(col.left().typ_without_period(),
-                                col.right().typ_without_break_or_period());
+          (&mut *(data as *const TrainingData as *mut TrainingData)).insert_collocation(
+            col.left().typ_without_period(),
+            col.right().typ_without_break_or_period(),
+          );
         }
       }
     }
   }
 }
 
-
-fn is_rare_abbrev_type<P>(data: &TrainingData,
-                          type_fdist: &FrequencyDistribution<&str>,
-                          tok0: &Token,
-                          tok1: &Token)
-                          -> bool
-  where P: TrainerParameters
+fn is_rare_abbrev_type<P>(
+  data: &TrainingData,
+  type_fdist: &FrequencyDistribution<&str>,
+  tok0: &Token,
+  tok1: &Token,
+) -> bool
+where
+  P: TrainerParameters,
 {
   use prelude::{BEG_UC, MID_UC};
 
@@ -451,22 +467,20 @@ fn is_rare_abbrev_type<P>(data: &TrainingData,
   }
 }
 
-
 #[inline(always)]
 fn is_potential_sentence_starter(cur: &Token, prev: &Token) -> bool {
   prev.is_sentence_break() && !(prev.is_numeric() || prev.is_initial()) && cur.is_alphabetic()
 }
 
-
 #[inline(always)]
 fn is_potential_collocation<P>(tok0: &Token, tok1: &Token) -> bool
-  where P: TrainerParameters
+where
+  P: TrainerParameters,
 {
-  P::include_all_collocations() || (P::include_abbrev_collocations() && tok0.is_abbrev()) ||
-  (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())) && tok0.is_non_punct() &&
-  tok1.is_non_punct()
+  P::include_all_collocations() || (P::include_abbrev_collocations() && tok0.is_abbrev())
+    || (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())) && tok0.is_non_punct()
+      && tok1.is_non_punct()
 }
-
 
 /// Iterates over every token from the supplied iterator. Only returns
 /// the ones that are 'not obviously' abbreviations. Also returns the associated
@@ -480,8 +494,9 @@ struct ReclassifyIterator<'b, I, P> {
 }
 
 impl<'b, I, P> Iterator for ReclassifyIterator<'b, I, P>
-  where I: Iterator<Item = &'b Token>,
-        P: TrainerParameters
+where
+  I: Iterator<Item = &'b Token>,
+  P: TrainerParameters,
 {
   type Item = (&'b Token, f64);
 
@@ -502,25 +517,21 @@ impl<'b, I, P> Iterator for ReclassifyIterator<'b, I, P>
         }
       }
 
-      let num_periods = t.typ_without_period()
-                         .chars()
-                         .fold(0, |acc, c| {
-                           if c == '.' {
-                             acc + 1
-                           } else {
-                             acc
-                           }
-                         }) + 1;
+      let num_periods =
+        t.typ_without_period()
+          .chars()
+          .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
       let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
 
       let count_with_period = self.type_fdist.get(t.typ_with_period());
       let count_without_period = self.type_fdist.get(t.typ_without_period());
 
-      let likelihood =
-        util::dunning_log_likelihood((count_with_period + count_without_period) as f64,
-                                     self.period_token_count as f64,
-                                     count_with_period as f64,
-                                     self.type_fdist.sum_counts() as f64);
+      let likelihood = util::dunning_log_likelihood(
+        (count_with_period + count_without_period) as f64,
+        self.period_token_count as f64,
+        count_with_period as f64,
+        self.type_fdist.sum_counts() as f64,
+      );
 
       let f_length = (-(num_nonperiods as f64)).exp();
       let f_penalty = if P::ignore_abbrev_penalty() {
@@ -538,13 +549,14 @@ impl<'b, I, P> Iterator for ReclassifyIterator<'b, I, P>
   }
 }
 
-
 struct TokenWithContextIterator<I> {
   iter: I,
   ctxt: OrthographyPosition,
 }
 
-impl<'a, I> Iterator for TokenWithContextIterator<I> where I: Iterator<Item = &'a Token>
+impl<'a, I> Iterator for TokenWithContextIterator<I>
+where
+  I: Iterator<Item = &'a Token>,
 {
   type Item = (&'a Token, OrthographicContext);
 
@@ -560,8 +572,9 @@ impl<'a, I> Iterator for TokenWithContextIterator<I> where I: Iterator<Item = &'
           self.ctxt = OrthographyPosition::Unknown;
         }
 
-        let flag = *::prelude::ORTHO_MAP.get(&(self.ctxt.as_byte() | t.first_case().as_byte()))
-                                        .unwrap_or(&0);
+        let flag = *::prelude::ORTHO_MAP
+          .get(&(self.ctxt.as_byte() | t.first_case().as_byte()))
+          .unwrap_or(&0);
 
         if t.is_sentence_break() {
           if !(t.is_numeric() || t.is_initial()) {
@@ -582,7 +595,6 @@ impl<'a, I> Iterator for TokenWithContextIterator<I> where I: Iterator<Item = &'
   }
 }
 
-
 struct PotentialCollocationsIterator<'b, I, P> {
   iter: I,
   data: &'b TrainingData,
@@ -592,36 +604,43 @@ struct PotentialCollocationsIterator<'b, I, P> {
 }
 
 impl<'a, 'b, I, P> Iterator for PotentialCollocationsIterator<'b, I, P>
-  where I: Iterator<Item = &'a Collocation<&'a Token>>,
-        P: TrainerParameters
+where
+  I: Iterator<Item = &'a Collocation<&'a Token>>,
+  P: TrainerParameters,
 {
   type Item = (&'a Collocation<&'a Token>, f64);
 
   #[inline]
   fn next(&mut self) -> Option<(&'a Collocation<&'a Token>, f64)> {
     while let Some(col) = self.iter.next() {
-      if self.data.contains_sentence_starter(col.right().typ_without_break_or_period()) {
+      if self
+        .data
+        .contains_sentence_starter(col.right().typ_without_break_or_period())
+      {
         continue;
       }
 
       let count = self.collocation_fdist.get(col);
 
-      let left_count = self.type_fdist.get(col.left().typ_without_period()) +
-                       self.type_fdist.get(col.left().typ_with_period());
-      let right_count = self.type_fdist.get(col.right().typ_without_period()) +
-                        self.type_fdist.get(col.right().typ_with_period());
+      let left_count = self.type_fdist.get(col.left().typ_without_period())
+        + self.type_fdist.get(col.left().typ_with_period());
+      let right_count = self.type_fdist.get(col.right().typ_without_period())
+        + self.type_fdist.get(col.right().typ_with_period());
 
-      if left_count > 1 && right_count > 1 &&
-         P::collocation_frequency_lower_bound() < count as f64 &&
-         count <= min(left_count, right_count) {
-        let likelihood = util::col_log_likelihood(left_count as f64,
-                                                  right_count as f64,
-                                                  count as f64,
-                                                  self.type_fdist.sum_counts() as f64);
+      if left_count > 1 && right_count > 1 && P::collocation_frequency_lower_bound() < count as f64
+        && count <= min(left_count, right_count)
+      {
+        let likelihood = util::col_log_likelihood(
+          left_count as f64,
+          right_count as f64,
+          count as f64,
+          self.type_fdist.sum_counts() as f64,
+        );
 
-        if likelihood >= P::collocation_lower_bound() &&
-           (self.type_fdist.sum_counts() as f64 / left_count as f64) >
-           (right_count as f64 / count as f64) {
+        if likelihood >= P::collocation_lower_bound()
+          && (self.type_fdist.sum_counts() as f64 / left_count as f64)
+            > (right_count as f64 / count as f64)
+        {
           return Some((col, likelihood));
         }
       }
@@ -630,7 +649,6 @@ impl<'a, 'b, I, P> Iterator for PotentialCollocationsIterator<'b, I, P>
     None
   }
 }
-
 
 struct PotentialSentenceStartersIterator<'b, I, P> {
   iter: I,
@@ -641,8 +659,9 @@ struct PotentialSentenceStartersIterator<'b, I, P> {
 }
 
 impl<'a, 'b, I, P> Iterator for PotentialSentenceStartersIterator<'b, I, P>
-  where I: Iterator<Item = &'a &'a Token>,
-        P: TrainerParameters
+where
+  I: Iterator<Item = &'a &'a Token>,
+  P: TrainerParameters,
 {
   type Item = (&'a Token, f64);
 
@@ -650,22 +669,25 @@ impl<'a, 'b, I, P> Iterator for PotentialSentenceStartersIterator<'b, I, P>
   fn next(&mut self) -> Option<(&'a Token, f64)> {
     while let Some(tok) = self.iter.next() {
       let ss_count = self.sentence_starter_fdist.get(tok);
-      let typ_count = self.type_fdist.get(tok.typ_with_period()) +
-                      self.type_fdist.get(tok.typ_without_period());
+      let typ_count =
+        self.type_fdist.get(tok.typ_with_period()) + self.type_fdist.get(tok.typ_without_period());
 
       if typ_count < ss_count {
         continue;
       }
 
-      let likelihood = util::col_log_likelihood(self.sentence_break_count as f64,
-                                                typ_count as f64,
-                                                ss_count as f64,
-                                                self.type_fdist.sum_counts() as f64);
+      let likelihood = util::col_log_likelihood(
+        self.sentence_break_count as f64,
+        typ_count as f64,
+        ss_count as f64,
+        self.type_fdist.sum_counts() as f64,
+      );
 
       let ratio = self.type_fdist.sum_counts() as f64 / self.sentence_break_count as f64;
 
-      if likelihood >= P::sentence_starter_lower_bound() &&
-         ratio > (typ_count as f64 / ss_count as f64) {
+      if likelihood >= P::sentence_starter_lower_bound()
+        && ratio > (typ_count as f64 / ss_count as f64)
+      {
         return Some((*tok, likelihood));
       }
     }
@@ -674,15 +696,17 @@ impl<'a, 'b, I, P> Iterator for PotentialSentenceStartersIterator<'b, I, P>
   }
 }
 
-
 struct ConsecutiveItemIterator<'a, T: 'a, I>
-  where I: Iterator<Item = &'a T>
+where
+  I: Iterator<Item = &'a T>,
 {
   iter: I,
   last: Option<&'a T>,
 }
 
-impl<'a, T: 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I> where I: Iterator<Item = &'a T>
+impl<'a, T: 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I>
+where
+  I: Iterator<Item = &'a T>,
 {
   type Item = (&'a T, Option<&'a T>);
 
@@ -693,19 +717,16 @@ impl<'a, T: 'a, I> Iterator for ConsecutiveItemIterator<'a, T, I> where I: Itera
         self.last = self.iter.next();
         Some((i, self.last))
       }
-      None => {
-        match self.iter.next() {
-          Some(i) => {
-            self.last = self.iter.next();
-            Some((i, self.last))
-          }
-          None => None,
+      None => match self.iter.next() {
+        Some(i) => {
+          self.last = self.iter.next();
+          Some((i, self.last))
         }
-      }
+        None => None,
+      },
     }
   }
 }
-
 
 // Macro for generating functions to load precompiled data.
 macro_rules! preloaded_data(
@@ -717,7 +738,6 @@ macro_rules! preloaded_data(
     }
   )
 );
-
 
 preloaded_data!(czech, "data/czech.json");
 preloaded_data!(danish, "data/danish.json");
@@ -737,7 +757,6 @@ preloaded_data!(spanish, "data/spanish.json");
 preloaded_data!(swedish, "data/swedish.json");
 preloaded_data!(turkish, "data/turkish.json");
 
-
 #[test]
 fn test_data_load_from_json_test() {
   let data: TrainingData = TrainingData::english();
@@ -750,7 +769,6 @@ fn test_data_load_from_json_test() {
   assert!(data.contains_abbrev("w.va"));
   assert!(data.contains_collocation("##number##", "corrections"));
 }
-
 
 macro_rules! bench_trainer(
   ($name:ident, $doc:expr) => (
@@ -767,16 +785,20 @@ macro_rules! bench_trainer(
 
 bench_trainer!(
   bench_trainer_short,
-  include_str!("../test/raw/sigma-wiki.txt"));
+  include_str!("../test/raw/sigma-wiki.txt")
+);
 
 bench_trainer!(
   bench_trainer_medium,
-  include_str!("../test/raw/npr-article-01.txt"));
+  include_str!("../test/raw/npr-article-01.txt")
+);
 
 bench_trainer!(
   bench_trainer_long,
-  include_str!("../test/raw/the-sayings-of-confucius.txt"));
+  include_str!("../test/raw/the-sayings-of-confucius.txt")
+);
 
 bench_trainer!(
   bench_trainer_very_long,
-  include_str!("../test/raw/pride-and-prejudice.txt"));
+  include_str!("../test/raw/pride-and-prejudice.txt")
+);

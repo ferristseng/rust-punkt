@@ -12,14 +12,14 @@ use prelude::DefinesSentenceEndings;
 
 use num::Float;
 
-
 /// Peforms a first pass annotation on a Token.
 pub fn annotate_first_pass<P: DefinesSentenceEndings>(tok: &mut Token, data: &TrainingData) {
-  let is_split_abbrev = tok.tok()
-                           .rsplitn(1, '-')
-                           .next()
-                           .map(|s| data.contains_abbrev(s))
-                           .unwrap_or(false);
+  let is_split_abbrev = tok
+    .tok()
+    .rsplitn(1, '-')
+    .next()
+    .map(|s| data.contains_abbrev(s))
+    .unwrap_or(false);
 
   if tok.tok().len() == 1 && P::is_sentence_ending(&tok.tok().chars().nth(0).unwrap()) {
     tok.set_is_sentence_break(true);
@@ -32,7 +32,6 @@ pub fn annotate_first_pass<P: DefinesSentenceEndings>(tok: &mut Token, data: &Tr
   }
 }
 
-
 pub fn dunning_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64) -> f64 {
   let p1 = count_b / n;
   let p2 = 0.99;
@@ -41,7 +40,6 @@ pub fn dunning_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64)
 
   -2.0 * (nullh - alth)
 }
-
 
 pub fn col_log_likelihood(count_a: f64, count_b: f64, count_ab: f64, n: f64) -> f64 {
   let p = count_b / n;

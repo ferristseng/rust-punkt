@@ -138,14 +138,14 @@
 #![plugin(phf_macros)]
 #![warn(missing_docs)]
 
-extern crate phf;
-extern crate num;
-extern crate rustc_serialize;
 extern crate freqdist;
-#[cfg(test)]
-extern crate walkdir;
+extern crate num;
+extern crate phf;
+extern crate rustc_serialize;
 #[cfg(test)]
 extern crate test;
+#[cfg(test)]
+extern crate walkdir;
 
 mod trainer;
 mod util;
@@ -154,16 +154,15 @@ mod tokenizer;
 mod prelude;
 
 pub use trainer::{Trainer, TrainingData};
-pub use tokenizer::{SentenceTokenizer, SentenceByteOffsetTokenizer};
+pub use tokenizer::{SentenceByteOffsetTokenizer, SentenceTokenizer};
 
 /// Contains traits for configuring all tokenizers, and the trainer. Also
 /// contains default parameters for tokenizers, and the trainer.
 pub mod params {
-  pub use prelude::{DefinesSentenceEndings, DefinesInternalPunctuation, DefinesNonWordCharacters,
-                    DefinesPunctuation, DefinesNonPrefixCharacters, TrainerParameters,
-                    DefaultCharacterDefinitions, Standard, Set};
+  pub use prelude::{DefaultCharacterDefinitions, DefinesInternalPunctuation,
+                    DefinesNonPrefixCharacters, DefinesNonWordCharacters, DefinesPunctuation,
+                    DefinesSentenceEndings, Set, Standard, TrainerParameters};
 }
-
 
 #[cfg(test)]
 fn get_test_scenarios(dir_path: &str, raw_path: &str) -> Vec<(Vec<String>, String, String)> {
@@ -189,7 +188,9 @@ fn get_test_scenarios(dir_path: &str, raw_path: &str) -> Vec<(Vec<String>, Strin
       // articles in the directory with test outcomes.
       let rawp = Path::new(raw_path).join(fpath.file_name().unwrap());
 
-      fs::File::open(&fpath).unwrap().read_to_string(&mut exp_strb);
+      fs::File::open(&fpath)
+        .unwrap()
+        .read_to_string(&mut exp_strb);
       fs::File::open(&rawp).unwrap().read_to_string(&mut raw_strb);
 
       // Expected results, split by newlines.
