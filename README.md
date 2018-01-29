@@ -1,21 +1,28 @@
-# Punkt
+# punkt
 
 [![Build Status](https://travis-ci.org/ferristseng/rust-punkt.svg)](https://travis-ci.org/ferristseng/rust-punkt)
-[![](http://meritbadge.herokuapp.com/punkt)](https://crates.io/crates/punkt)
+[![Crates.io](https://img.shields.io/crates/v/punkt.svg)](https://crates.io/crates/punkt)
+[![Docs.rs](https://docs.rs/punkt/badge.svg)](https://docs.rs/punkt/)
 
-Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence 
-tokenization. Results have been compared with small and large texts that have 
-been tokenized using NLTK. 
+## Overview
 
-## Usage
+Implementation of Tibor Kiss' and Jan Strunk's Punkt algorithm for sentence
+tokenization. Results have been compared with small and large texts that have
+been tokenized using NLTK.
 
-*For full examples, see rust-punkt/examples*
+## Training
 
-The punkt algorithm allows you to derive all the necessary data to perform 
-sentence tokenization from the document itself. 
+Training data can be provided to a `SentenceTokenizer` for better
+results. Data can be acquired manually by training with a `Trainer`,
+or using already compiled data from NLTK (example: `TrainingData::english()`).
+
+## Typical Usage
+
+The punkt algorithm allows you to derive all the necessary data to perform
+sentence tokenization from the document itself.
 
 ```rust
-let doc = "I bought $5.50 worth of apples from the store. I gave them to my dog when I came home.";
+#
 let trainer: Trainer<Standard> = Trainer::new();
 let mut data = TrainingData::new();
 
@@ -29,13 +36,15 @@ for s in SentenceTokenizer::<Standard>::new(doc, &data) {
 `rust-punkt` also provides pretrained data that can be loaded for certain languages.
 
 ```rust
+#
+#
 let data = TrainingData::english();
-...
 ```
 
 `rust-punkt` also allows training data to be incrementally gathered.
 
 ```rust
+#
 let trainer: Trainer<Standard> = Trainer::new();
 let mut data = TrainingData::new();
 
@@ -50,51 +59,69 @@ for d in docs.iter() {
 
 ## Customization
 
-*For a full example, see rust-punkt/examples/custom-parameters.rs*
-
-`rust-punkt` exposes a number of traits to customize how the trainer, sentence tokenizer, 
-and internal tokenizers work. The default settings, which are nearly identical, to the 
+`rust-punkt` exposes a number of traits to customize how the trainer, sentence tokenizer,
+and internal tokenizers work. The default settings, which are nearly identical, to the
 ones available in the Python library are available in `punkt::params::Standard`.
 
 To modify only how the trainer works:
 
 ```rust
+#
 struct MyParams;
 
-impl DefaultCharacterDefinitions for MyParams { }
+impl DefinesInternalPunctuation for MyParams {}
+impl DefinesNonPrefixCharacters for MyParams {}
+impl DefinesNonWordCharacters for MyParams {}
+impl DefinesPunctuation for MyParams {}
+impl DefinesSentenceEndings for MyParams {}
 
 impl TrainerParameters for MyParams {
-  ...
+  const ABBREV_LOWER_BOUND: f64 = 0.3;
+  const ABBREV_UPPER_BOUND: f64 = 8f64;
+  const IGNORE_ABBREV_PENALTY: bool = false;
+  const COLLOCATION_LOWER_BOUND: f64 = 7.88;
+  const SENTENCE_STARTER_LOWER_BOUND: f64 = 35f64;
+  const INCLUDE_ALL_COLLOCATIONS: bool = false;
+  const INCLUDE_ABBREV_COLLOCATIONS: bool = true;
+  const COLLOCATION_FREQUENCY_LOWER_BOUND: f64 = 0.8f64;
 }
 ```
 
 To fully modify how everything works:
 
 ```rust
+#
 struct MyParams;
 
-impl DefinesSentenceEndings for MyParams { 
-  ...
+impl DefinesSentenceEndings for MyParams {
+  // const SENTENCE_ENDINGS: &'static Set<char> = &phf_set![...];
 }
 
 impl DefinesInternalPunctuation for MyParams {
-  ...
+  // const INTERNAL_PUNCTUATION: &'static Set<char> = &phf_set![...];
 }
 
-impl DefinesNonWordCharacters for MyParams { 
-  ...
+impl DefinesNonWordCharacters for MyParams {
+  // const NONWORD_CHARS: &'static Set<char> = &phf_set![...];
 }
 
 impl DefinesPunctuation for MyParams {
-  ...
+  // const PUNCTUATION: &'static Set<char> = &phf_set![...];
 }
 
 impl DefinesNonPrefixCharacters for MyParams {
-  ...
+  // const NONPREFIX_CHARS: &'static Set<char> = &phf_set![...];
 }
 
 impl TrainerParameters for MyParams {
-  ...
+  // const ABBREV_LOWER_BOUND: f64 = ...;
+  // const ABBREV_UPPER_BOUND: f64 = ...;
+  // const IGNORE_ABBREV_PENALTY: bool = ...;
+  // const COLLOCATION_LOWER_BOUND: f64 = ...;
+  // const SENTENCE_STARTER_LOWER_BOUND: f64 = ...;
+  // const INCLUDE_ALL_COLLOCATIONS: bool = ...;
+  // const INCLUDE_ABBREV_COLLOCATIONS: bool = true;
+  // const COLLOCATION_FREQUENCY_LOWER_BOUND: f64 = ...;
 }
 ```
 
