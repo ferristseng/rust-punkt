@@ -76,21 +76,25 @@
 //! To modify only how the trainer works:
 //!
 //! ```
-//! # use punkt::params::{DefaultCharacterDefinitions, TrainerParameters};
+//! # use punkt::params::*;
 //! #
 //! struct MyParams;
 //!
-//! impl DefaultCharacterDefinitions for MyParams { }
+//! impl DefinesInternalPunctuation for MyParams {}
+//! impl DefinesNonPrefixCharacters for MyParams {}
+//! impl DefinesNonWordCharacters for MyParams {}
+//! impl DefinesPunctuation for MyParams {}
+//! impl DefinesSentenceEndings for MyParams {}
 //!
 //! impl TrainerParameters for MyParams {
-//! # fn abbrev_lower_bound() -> f64 { 0.3 }
-//! # fn abbrev_upper_bound() -> f64 { 8f64 }
-//! # fn ignore_abbrev_penalty() -> bool { false }
-//! # fn collocation_lower_bound() -> f64 { 7.88 }
-//! # fn sentence_starter_lower_bound() -> f64 { 35f64 }
-//! # fn include_all_collocations() -> bool { false }
-//! # fn include_abbrev_collocations() -> bool { true }
-//! # fn collocation_frequency_lower_bound() -> f64 { 0.8f64 }
+//!   const ABBREV_LOWER_BOUND: f64 = 0.3;
+//!   const ABBREV_UPPER_BOUND: f64 = 8f64;
+//!   const IGNORE_ABBREV_PENALTY: bool = false;
+//!   const COLLOCATION_LOWER_BOUND: f64 = 7.88;
+//!   const SENTENCE_STARTER_LOWER_BOUND: f64 = 35f64;
+//!   const INCLUDE_ALL_COLLOCATIONS: bool = false;
+//!   const INCLUDE_ABBREV_COLLOCATIONS: bool = true;
+//!   const COLLOCATION_FREQUENCY_LOWER_BOUND: f64 = 0.8f64;
 //! }
 //! ```
 //!
@@ -102,34 +106,34 @@
 //! struct MyParams;
 //!
 //! impl DefinesSentenceEndings for MyParams {
-//! # fn sentence_endings() -> &'static Set<char> { Standard::sentence_endings() }
+//!   // const SENTENCE_ENDINGS: &'static Set<char> = &phf_set![...];
 //! }
 //!
 //! impl DefinesInternalPunctuation for MyParams {
-//! # fn internal_punctuation() -> &'static Set<char> { Standard::sentence_endings() }
+//!   // const INTERNAL_PUNCTUATION: &'static Set<char> = &phf_set![...];
 //! }
 //!
 //! impl DefinesNonWordCharacters for MyParams {
-//! # fn nonword_chars() -> &'static Set<char> { Standard::nonword_chars() }
+//!   // const NONWORD_CHARS: &'static Set<char> = &phf_set![...];
 //! }
 //!
 //! impl DefinesPunctuation for MyParams {
-//! # fn punctuation() -> &'static Set<char> { Standard::punctuation() }
+//!   // const PUNCTUATION: &'static Set<char> = &phf_set![...];
 //! }
 //!
 //! impl DefinesNonPrefixCharacters for MyParams {
-//! # fn nonprefix_chars() -> &'static Set<char> { Standard::nonprefix_chars() }
+//!   // const NONPREFIX_CHARS: &'static Set<char> = &phf_set![...];
 //! }
 //!
 //! impl TrainerParameters for MyParams {
-//! # fn abbrev_lower_bound() -> f64 { 0.3 }
-//! # fn abbrev_upper_bound() -> f64 { 8f64 }
-//! # fn ignore_abbrev_penalty() -> bool { false }
-//! # fn collocation_lower_bound() -> f64 { 7.88 }
-//! # fn sentence_starter_lower_bound() -> f64 { 35f64 }
-//! # fn include_all_collocations() -> bool { false }
-//! # fn include_abbrev_collocations() -> bool { true }
-//! # fn collocation_frequency_lower_bound() -> f64 { 0.8f64 }
+//!   // const ABBREV_LOWER_BOUND: f64 = ...;
+//!   // const ABBREV_UPPER_BOUND: f64 = ...;
+//!   // const IGNORE_ABBREV_PENALTY: bool = ...;
+//!   // const COLLOCATION_LOWER_BOUND: f64 = ...;
+//!   // const SENTENCE_STARTER_LOWER_BOUND: f64 = ...;
+//!   // const INCLUDE_ALL_COLLOCATIONS: bool = ...;
+//!   // const INCLUDE_ABBREV_COLLOCATIONS: bool = true;
+//!   // const COLLOCATION_FREQUENCY_LOWER_BOUND: f64 = ...;
 //! }
 //! ```
 
@@ -159,9 +163,9 @@ pub use tokenizer::{SentenceByteOffsetTokenizer, SentenceTokenizer};
 /// Contains traits for configuring all tokenizers, and the trainer. Also
 /// contains default parameters for tokenizers, and the trainer.
 pub mod params {
-  pub use prelude::{DefaultCharacterDefinitions, DefinesInternalPunctuation,
-                    DefinesNonPrefixCharacters, DefinesNonWordCharacters, DefinesPunctuation,
-                    DefinesSentenceEndings, Set, Standard, TrainerParameters};
+  pub use prelude::{DefinesInternalPunctuation, DefinesNonPrefixCharacters,
+                    DefinesNonWordCharacters, DefinesPunctuation, DefinesSentenceEndings, Set,
+                    Standard, TrainerParameters};
 }
 
 #[cfg(test)]

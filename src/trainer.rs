@@ -320,7 +320,7 @@ where
       };
 
       for (t, score) in reclassify_iter {
-        if score >= P::abbrev_lower_bound() {
+        if score >= P::ABBREV_LOWER_BOUND {
           if t.has_final_period() {
             unsafe {
               (&mut *(data as *const TrainingData as *mut TrainingData))
@@ -449,7 +449,7 @@ where
     let count = (type_fdist[key] + type_fdist[&key[..key.len() - 1]]) as f64;
 
     // Already an abbreviation...
-    if data.contains_abbrev(tok0.typ()) || count >= P::abbrev_upper_bound() {
+    if data.contains_abbrev(tok0.typ()) || count >= P::ABBREV_UPPER_BOUND {
       false
     } else if P::is_internal_punctuation(&tok1.typ().chars().next().unwrap()) {
       true
@@ -477,7 +477,7 @@ fn is_potential_collocation<P>(tok0: &Token, tok1: &Token) -> bool
 where
   P: TrainerParameters,
 {
-  P::include_all_collocations() || (P::include_abbrev_collocations() && tok0.is_abbrev())
+  P::INCLUDE_ALL_COLLOCATIONS || (P::INCLUDE_ABBREV_COLLOCATIONS && tok0.is_abbrev())
     || (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())) && tok0.is_non_punct()
       && tok1.is_non_punct()
 }
@@ -517,10 +517,9 @@ where
         }
       }
 
-      let num_periods =
-        t.typ_without_period()
-          .chars()
-          .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
+      let num_periods = t.typ_without_period()
+        .chars()
+        .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
       let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
 
       let count_with_period = self.type_fdist.get(t.typ_with_period());
@@ -534,7 +533,7 @@ where
       );
 
       let f_length = (-(num_nonperiods as f64)).exp();
-      let f_penalty = if P::ignore_abbrev_penalty() {
+      let f_penalty = if P::IGNORE_ABBREV_PENALTY {
         0f64
       } else {
         (num_nonperiods as f64).powi(-(count_without_period as i32))
@@ -627,7 +626,7 @@ where
       let right_count = self.type_fdist.get(col.right().typ_without_period())
         + self.type_fdist.get(col.right().typ_with_period());
 
-      if left_count > 1 && right_count > 1 && P::collocation_frequency_lower_bound() < count as f64
+      if left_count > 1 && right_count > 1 && P::COLLOCATION_FREQUENCY_LOWER_BOUND < count as f64
         && count <= min(left_count, right_count)
       {
         let likelihood = util::col_log_likelihood(
@@ -637,7 +636,7 @@ where
           self.type_fdist.sum_counts() as f64,
         );
 
-        if likelihood >= P::collocation_lower_bound()
+        if likelihood >= P::COLLOCATION_LOWER_BOUND
           && (self.type_fdist.sum_counts() as f64 / left_count as f64)
             > (right_count as f64 / count as f64)
         {
@@ -685,7 +684,7 @@ where
 
       let ratio = self.type_fdist.sum_counts() as f64 / self.sentence_break_count as f64;
 
-      if likelihood >= P::sentence_starter_lower_bound()
+      if likelihood >= P::SENTENCE_STARTER_LOWER_BOUND
         && ratio > (typ_count as f64 / ss_count as f64)
       {
         return Some((*tok, likelihood));

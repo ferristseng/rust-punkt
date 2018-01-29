@@ -14,199 +14,107 @@ pub type Set<T> = phf::Set<T>;
 /// Defines a set of punctuation that can end a sentence.
 pub trait DefinesSentenceEndings {
   /// The set of characters that constitute a sentence ending.
-  fn sentence_endings() -> &'static Set<char>;
+  const SENTENCE_ENDINGS: &'static Set<char> = &phf_set!['.', '?', '!'];
 
   /// Checks if a character is a sentence ending.
-  #[inline(always)]
+  #[inline]
   fn is_sentence_ending(c: &char) -> bool {
-    Self::sentence_endings().contains(c)
+    Self::SENTENCE_ENDINGS.contains(c)
   }
 }
 
 /// Defines a set of punctuation that can occur within a word.
 pub trait DefinesInternalPunctuation {
   /// The set of legal punctuation characters that can occur within a word.
-  fn internal_punctuation() -> &'static Set<char>;
+  const INTERNAL_PUNCTUATION: &'static Set<char> = &phf_set![',', ':', ';', '\u{2014}'];
 
   /// Checks if a character is a legal punctuation character that can occur
   /// within a word.
-  #[inline(always)]
+  #[inline]
   fn is_internal_punctuation(c: &char) -> bool {
-    Self::internal_punctuation().contains(c)
+    Self::INTERNAL_PUNCTUATION.contains(c)
   }
 }
 
 /// Defines a set of characters that can not occur inside of a word.
 pub trait DefinesNonWordCharacters {
   /// The set of characters that can not occur inside of a word.
-  fn nonword_chars() -> &'static Set<char>;
+  const NONWORD_CHARS: &'static Set<char> = &phf_set![
+    '?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'', '(', '{', '['
+  ];
 
   /// Checks if a character is one that can not occur inside of a word.
-  #[inline(always)]
+  #[inline]
   fn is_nonword_char(c: &char) -> bool {
-    Self::nonword_chars().contains(c)
+    Self::NONWORD_CHARS.contains(c)
   }
 }
 
 /// Defines punctuation that can occur within a sentence.
 pub trait DefinesPunctuation {
   /// The set of legal punctuation marks.
-  fn punctuation() -> &'static Set<char>;
+  const PUNCTUATION: &'static Set<char> = &phf_set![';', ':', ',', '.', '!', '?'];
 
   /// Checks if a characters is a legal punctuation mark.
-  #[inline(always)]
+  #[inline]
   fn is_punctuation(c: &char) -> bool {
-    Self::punctuation().contains(c)
+    Self::PUNCTUATION.contains(c)
   }
 }
 
 /// Defines a set of a characters that can not start a word.
 pub trait DefinesNonPrefixCharacters {
   /// The set of characters that can not start a word.
-  fn nonprefix_chars() -> &'static Set<char>;
+  const NONPREFIX_CHARS: &'static Set<char> = &phf_set![
+    '(', '"', '`', '{', '[', ':', ';', '&', '#', '*', '@', ')', '}', ']', '-', ','
+  ];
 
   /// Checks if a character can start a word.
-  #[inline(always)]
+  #[inline]
   fn is_nonprefix_char(c: &char) -> bool {
-    Self::nonprefix_chars().contains(c)
+    Self::NONPREFIX_CHARS.contains(c)
   }
 }
 
 /// Configurable parameters for a trainer.
 pub trait TrainerParameters: DefinesSentenceEndings + DefinesInternalPunctuation {
   /// Lower bound score for a token to be considered an abbreviation.
-  fn abbrev_lower_bound() -> f64;
+  const ABBREV_LOWER_BOUND: f64 = 0.3;
 
   /// Upper bound score for a token to be considered an abbreviation.
-  fn abbrev_upper_bound() -> f64;
+  const ABBREV_UPPER_BOUND: f64 = 5f64;
 
   /// Disables the abbreviation penalty which exponentially penalizes occurances
   /// of words without a trailing period.
-  fn ignore_abbrev_penalty() -> bool;
+  const IGNORE_ABBREV_PENALTY: bool = false;
 
   /// Lower bound score for two tokens to be considered a collocation
-  fn collocation_lower_bound() -> f64;
+  const COLLOCATION_LOWER_BOUND: f64 = 7.88;
 
   /// Lower bound score for a token to be considered a sentence starter.
-  fn sentence_starter_lower_bound() -> f64;
+  const SENTENCE_STARTER_LOWER_BOUND: f64 = 30f64;
 
   /// Include all pairs where the first token ends with a period.
-  fn include_all_collocations() -> bool;
+  const INCLUDE_ALL_COLLOCATIONS: bool = false;
 
   /// Include all pairs where the first is an abbreviation. Overridden by
   /// `include_all_collocations`.
-  fn include_abbrev_collocations() -> bool;
+  const INCLUDE_ABBREV_COLLOCATIONS: bool = false;
 
   /// Minimum number of times a bigram appears in order to be considered a
   /// collocation.
-  fn collocation_frequency_lower_bound() -> f64;
-}
-
-static INTERNAL_PUNCT: Set<char> = phf_set![',', ':', ';', '\u{2014}'];
-static SENTENCE_ENDINGS: Set<char> = phf_set!['.', '?', '!'];
-static PUNCTUATION: Set<char> = phf_set![';', ':', ',', '.', '!', '?'];
-static NONWORD_CHARS: Set<char> = phf_set![
-  '?', '!', ')', '"', ';', '}', ']', '*', ':', '@', '\'', '(', '{', '['
-];
-static NONPREFIX_CHARS: Set<char> = phf_set![
-  '(', '"', '`', '{', '[', ':', ';', '&', '#', '*', '@', ')', '}', ']', '-', ','
-];
-
-/// Mixin that will give the default implementations for
-/// `DefinesSentenceEndings`, `DefinesInternalPunctuation`,
-/// `DefinesNonWordCharacter`, `DefinesEndingPunctuation`,
-/// and `DefinesNonPrefixCharacters`.
-pub trait DefaultCharacterDefinitions {}
-
-impl<T> DefinesSentenceEndings for T
-where
-  T: DefaultCharacterDefinitions,
-{
-  #[inline(always)]
-  fn sentence_endings() -> &'static Set<char> {
-    &SENTENCE_ENDINGS
-  }
-}
-
-impl<T> DefinesInternalPunctuation for T
-where
-  T: DefaultCharacterDefinitions,
-{
-  #[inline(always)]
-  fn internal_punctuation() -> &'static Set<char> {
-    &INTERNAL_PUNCT
-  }
-}
-
-impl<T> DefinesNonWordCharacters for T
-where
-  T: DefaultCharacterDefinitions,
-{
-  #[inline(always)]
-  fn nonword_chars() -> &'static Set<char> {
-    &NONWORD_CHARS
-  }
-}
-
-impl<T> DefinesPunctuation for T
-where
-  T: DefaultCharacterDefinitions,
-{
-  #[inline(always)]
-  fn punctuation() -> &'static Set<char> {
-    &PUNCTUATION
-  }
-}
-
-impl<T> DefinesNonPrefixCharacters for T
-where
-  T: DefaultCharacterDefinitions,
-{
-  #[inline(always)]
-  fn nonprefix_chars() -> &'static Set<char> {
-    &NONPREFIX_CHARS
-  }
+  const COLLOCATION_FREQUENCY_LOWER_BOUND: f64 = 1f64;
 }
 
 /// Standard settings for all tokenizers, and trainers.
 pub struct Standard;
 
-impl DefaultCharacterDefinitions for Standard {}
-
-impl TrainerParameters for Standard {
-  #[inline(always)]
-  fn abbrev_lower_bound() -> f64 {
-    0.3
-  }
-  #[inline(always)]
-  fn abbrev_upper_bound() -> f64 {
-    5f64
-  }
-  #[inline(always)]
-  fn ignore_abbrev_penalty() -> bool {
-    false
-  }
-  #[inline(always)]
-  fn collocation_lower_bound() -> f64 {
-    7.88
-  }
-  #[inline(always)]
-  fn sentence_starter_lower_bound() -> f64 {
-    30f64
-  }
-  #[inline(always)]
-  fn include_all_collocations() -> bool {
-    false
-  }
-  #[inline(always)]
-  fn include_abbrev_collocations() -> bool {
-    false
-  }
-  #[inline(always)]
-  fn collocation_frequency_lower_bound() -> f64 {
-    1f64
-  }
-}
+impl DefinesInternalPunctuation for Standard {}
+impl DefinesNonPrefixCharacters for Standard {}
+impl DefinesNonWordCharacters for Standard {}
+impl DefinesPunctuation for Standard {}
+impl DefinesSentenceEndings for Standard {}
+impl TrainerParameters for Standard {}
 
 pub type OrthographicContext = u8;
 
