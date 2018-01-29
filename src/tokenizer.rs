@@ -56,9 +56,11 @@ impl<'a, P> PeriodContextTokenizer<'a, P> where P: DefinesNonWordCharacters + De
         // of a new token (if there is a space after it, or if the next
         // character is puntuation).
         c if P::is_sentence_ending(&c) => {
-          let nxt = iter.next().unwrap();
-
-          if nxt.is_whitespace() || P::is_nonword_char(&nxt) {
+          if let Some(nxt) = iter.next() {
+            if nxt.is_whitespace() || P::is_nonword_char(&nxt) {
+              break;
+            }
+          } else {
             break;
           }
         }
@@ -704,6 +706,14 @@ fn sentence_tokenizer_issue_5_test() {
 
   assert_eq!(iter.next().unwrap(), "this is a great sentence!");
   assert_eq!(iter.next().unwrap(), "this is a sad sentence.");
+}
+
+// https://github.com/ferristseng/rust-punkt/issues/8
+#[test]
+fn sentence_tokenizer_issue_8_test() {
+  let data = TrainingData::english();
+  let doc = "this is a great sentence! this is a sad sentence.)...";
+  let _: Vec<_> = SentenceTokenizer::<::params::Standard>::new(doc, &data).collect();
 }
 
 
