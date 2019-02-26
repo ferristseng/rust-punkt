@@ -1,11 +1,11 @@
-#![feature(plugin)]
-#![plugin(phf_macros)]
+#![feature(proc_macro_hygiene)]
 
 extern crate phf;
 extern crate punkt;
 
 use punkt::params::*;
 use punkt::{SentenceTokenizer, Trainer, TrainingData};
+use phf::phf_set;
 
 struct MyParams;
 

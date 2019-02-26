@@ -137,9 +137,8 @@
 //! }
 //! ```
 
-#![feature(plugin)]
 #![cfg_attr(test, feature(test))]
-#![plugin(phf_macros)]
+#![feature(proc_macro_hygiene)]
 #![warn(missing_docs)]
 
 extern crate freqdist;

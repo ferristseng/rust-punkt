@@ -10,8 +10,7 @@ readme          = "README.md"
 
 [dependencies]
 num             = "0.1"
-phf             = "0.7"
-phf_macros      = "0.7"
+phf             = { version = "0.7", features = ["macros"] }
 rustc-serialize = "0.3"
 rust-freqdist   = "0.1"
 
