@@ -1,6 +1,6 @@
 [package]
 name            = "punkt"
-version         = "1.0.4"
+version         = "1.0.5"
 authors         = ["Ferris Tseng <ferristseng@fastmail.fm>"]
 keywords        = ["punkt", "sentence", "token", "tokenizer"]
 license         = "MIT/Apache-2.0"
