@@ -6,7 +6,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use phf;
+use phf::{self, phf_map, phf_set};
 
 /// Type for character sets.
 pub type Set<T> = phf::Set<T>;
