@@ -7,21 +7,23 @@
 // except according to those terms.
 
 use std::cmp::min;
-use std::ops::Deref;
-use std::str::FromStr;
+use std::collections::{HashMap, HashSet};
 use std::default::Default;
 use std::hash::{Hash, Hasher};
 use std::marker::PhantomData;
-use std::collections::{HashMap, HashSet};
+use std::ops::Deref;
+use std::str::FromStr;
 
 use freqdist::FrequencyDistribution;
 use rustc_serialize::json::Json;
 
-use util;
+use prelude::{
+  DefinesNonPrefixCharacters, DefinesNonWordCharacters, OrthographicContext, OrthographyPosition,
+  TrainerParameters,
+};
 use token::Token;
 use tokenizer::WordTokenizer;
-use prelude::{DefinesNonPrefixCharacters, DefinesNonWordCharacters, OrthographicContext,
-              OrthographyPosition, TrainerParameters};
+use util;
 
 /// A collocation is any pair of words that has a high likelihood of appearing
 /// together.
@@ -257,11 +259,13 @@ impl FromStr for TrainingData {
         });
 
         match obj.remove("ortho_context") {
-          Some(Json::Object(obj)) => for (k, ctxt) in obj.into_iter() {
-            ctxt
-              .as_u64()
-              .map(|c| data.orthographic_context.insert(k, c as u8));
-          },
+          Some(Json::Object(obj)) => {
+            for (k, ctxt) in obj.into_iter() {
+              ctxt
+                .as_u64()
+                .map(|c| data.orthographic_context.insert(k, c as u8));
+            }
+          }
           _ => return Err("failed to parse orthographic context section"),
         }
 
@@ -477,8 +481,10 @@ fn is_potential_collocation<P>(tok0: &Token, tok1: &Token) -> bool
 where
   P: TrainerParameters,
 {
-  P::INCLUDE_ALL_COLLOCATIONS || (P::INCLUDE_ABBREV_COLLOCATIONS && tok0.is_abbrev())
-    || (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial())) && tok0.is_non_punct()
+  P::INCLUDE_ALL_COLLOCATIONS
+    || (P::INCLUDE_ABBREV_COLLOCATIONS && tok0.is_abbrev())
+    || (tok0.is_sentence_break() && (tok0.is_numeric() || tok0.is_initial()))
+      && tok0.is_non_punct()
       && tok1.is_non_punct()
 }
 
@@ -517,9 +523,11 @@ where
         }
       }
 
-      let num_periods = t.typ_without_period()
-        .chars()
-        .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc }) + 1;
+      let num_periods =
+        t.typ_without_period()
+          .chars()
+          .fold(0, |acc, c| if c == '.' { acc + 1 } else { acc })
+          + 1;
       let num_nonperiods = t.typ_without_period().chars().count() - num_periods + 1;
 
       let count_with_period = self.type_fdist.get(t.typ_with_period());
@@ -626,7 +634,9 @@ where
       let right_count = self.type_fdist.get(col.right().typ_without_period())
         + self.type_fdist.get(col.right().typ_with_period());
 
-      if left_count > 1 && right_count > 1 && P::COLLOCATION_FREQUENCY_LOWER_BOUND < count as f64
+      if left_count > 1
+        && right_count > 1
+        && P::COLLOCATION_FREQUENCY_LOWER_BOUND < count as f64
         && count <= min(left_count, right_count)
       {
         let likelihood = util::col_log_likelihood(
@@ -769,6 +779,7 @@ fn test_data_load_from_json_test() {
   assert!(data.contains_collocation("##number##", "corrections"));
 }
 
+#[cfg(test)]
 macro_rules! bench_trainer(
   ($name:ident, $doc:expr) => (
     #[bench] fn $name(b: &mut ::test::Bencher) {
@@ -782,21 +793,25 @@ macro_rules! bench_trainer(
   )
 );
 
+#[cfg(test)]
 bench_trainer!(
   bench_trainer_short,
   include_str!("../test/raw/sigma-wiki.txt")
 );
 
+#[cfg(test)]
 bench_trainer!(
   bench_trainer_medium,
   include_str!("../test/raw/npr-article-01.txt")
 );
 
+#[cfg(test)]
 bench_trainer!(
   bench_trainer_long,
   include_str!("../test/raw/the-sayings-of-confucius.txt")
 );
 
+#[cfg(test)]
 bench_trainer!(
   bench_trainer_very_long,
   include_str!("../test/raw/pride-and-prejudice.txt")
