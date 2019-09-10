@@ -8,10 +8,11 @@
 
 use std::marker::PhantomData;
 
+use prelude::{
+  DefinesNonPrefixCharacters, DefinesNonWordCharacters, DefinesPunctuation, DefinesSentenceEndings,
+};
 use token::Token;
 use trainer::TrainingData;
-use prelude::{DefinesNonPrefixCharacters, DefinesNonWordCharacters, DefinesPunctuation,
-              DefinesSentenceEndings};
 
 const STATE_SENT_END: u8 = 0b00000001; // Hit a sentence end state.
 const STATE_TOKN_BEG: u8 = 0b00000010; // Token began state.
@@ -165,7 +166,8 @@ where
         }
         // Capturing the whitespace before a token, and a non-whitespace
         // is encountered. Start capturing that token.
-        c if state & STATE_SENT_END != 0 && state & STATE_TOKN_BEG != 0
+        c if state & STATE_SENT_END != 0
+          && state & STATE_TOKN_BEG != 0
           && state & STATE_CAPT_TOK == 0 =>
         {
           if !c.is_whitespace() {
@@ -613,8 +615,8 @@ fn is_multi_char(doc: &str, start: usize) -> Option<&str> {
 
 #[test]
 fn periodctxt_tokenizer_compare_nltk() {
-  use std::iter::Iterator;
   use prelude::Standard;
+  use std::iter::Iterator;
 
   for (expected, raw, file) in super::get_test_scenarios("test/word-periodctxt/", "test/raw/") {
     let iter: PeriodContextTokenizer<Standard> = PeriodContextTokenizer::new(&raw[..]);
@@ -717,6 +719,7 @@ fn sentence_tokenizer_issue_8_test() {
   let _: Vec<_> = SentenceTokenizer::<::params::Standard>::new(doc, &data).collect();
 }
 
+#[cfg(test)]
 macro_rules! bench_word_tokenizer(
   ($name:ident, $doc:expr) => (
     #[bench] fn $name(b: &mut ::test::Bencher) {
@@ -728,26 +731,31 @@ macro_rules! bench_word_tokenizer(
   )
 );
 
+#[cfg(test)]
 bench_word_tokenizer!(
   word_tokenizer_bench_short,
   include_str!("../test/raw/sigma-wiki.txt")
 );
 
+#[cfg(test)]
 bench_word_tokenizer!(
   word_tokenizer_bench_medium,
   include_str!("../test/raw/npr-article-01.txt")
 );
 
+#[cfg(test)]
 bench_word_tokenizer!(
   word_tokenizer_bench_long,
   include_str!("../test/raw/the-sayings-of-confucius.txt")
 );
 
+#[cfg(test)]
 bench_word_tokenizer!(
   word_tokenizer_bench_very_long,
   include_str!("../test/raw/pride-and-prejudice.txt")
 );
 
+#[cfg(test)]
 macro_rules! bench_sentence_tokenizer(
   ($name:ident, $doc:expr) => (
     #[bench] fn $name(b: &mut ::test::Bencher) {
@@ -766,16 +774,19 @@ macro_rules! bench_sentence_tokenizer(
   )
 );
 
+#[cfg(test)]
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_short,
   include_str!("../test/raw/sigma-wiki.txt")
 );
 
+#[cfg(test)]
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_medium,
   include_str!("../test/raw/npr-article-01.txt")
 );
 
+#[cfg(test)]
 bench_sentence_tokenizer!(
   bench_sentence_tokenizer_train_on_document_long,
   include_str!("../test/raw/pride-and-prejudice.txt")
